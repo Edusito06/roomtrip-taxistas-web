@@ -1,6 +1,7 @@
 package pe.pucp.tel05.taxi.taxista.domain;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -30,7 +31,9 @@ public class Taxista {
     private String numeroDocumento;
     @Indexed(unique = true)
     private String correo;
+    private LocalDate fechaNacimiento;
     private String telefono;
+    private String domicilio;
     private String passwordHash;
     private String fotoUrl;
 
@@ -106,6 +109,22 @@ public class Taxista {
 
     public void setCorreo(String correo) {
         this.correo = correo;
+    }
+
+    public LocalDate getFechaNacimiento() {
+        return fechaNacimiento;
+    }
+
+    public void setFechaNacimiento(LocalDate fechaNacimiento) {
+        this.fechaNacimiento = fechaNacimiento;
+    }
+
+    public String getDomicilio() {
+        return domicilio;
+    }
+
+    public void setDomicilio(String domicilio) {
+        this.domicilio = domicilio;
     }
 
     public String getTelefono() {

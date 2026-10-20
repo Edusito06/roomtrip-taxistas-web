@@ -1,7 +1,11 @@
 package pe.pucp.tel05.taxi.taxista.web.dto;
 
+import java.time.LocalDate;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -14,8 +18,11 @@ public record RegistroTaxistaRequest(
         @NotBlank(message = "Los apellidos son obligatorios") String apellidos,
         @NotBlank(message = "El tipo de documento es obligatorio") String tipoDocumento,
         @NotBlank(message = "El numero de documento es obligatorio") String numeroDocumento,
+        @NotNull(message = "La fecha de nacimiento es obligatoria")
+        @Past(message = "La fecha de nacimiento debe ser anterior a hoy") LocalDate fechaNacimiento,
         @NotBlank @Email(message = "El correo no tiene un formato valido") String correo,
         @NotBlank(message = "El telefono es obligatorio") String telefono,
+        @NotBlank(message = "El domicilio es obligatorio") String domicilio,
         @NotBlank @Size(min = 8, message = "La contrasenia debe tener al menos 8 caracteres") String password,
         @NotBlank(message = "La foto del taxista es obligatoria") String fotoUrl,
 

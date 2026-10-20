@@ -16,6 +16,7 @@ public record ActualizarPerfilRequest(
         @NotBlank(message = "Los nombres son obligatorios") String nombres,
         @NotBlank(message = "Los apellidos son obligatorios") String apellidos,
         @NotBlank(message = "El telefono es obligatorio") String telefono,
+        @NotBlank(message = "El domicilio es obligatorio") String domicilio,
         @NotBlank @Email(message = "El correo no tiene un formato valido") String correo,
         String password,
 

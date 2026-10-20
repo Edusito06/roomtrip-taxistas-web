@@ -57,7 +57,9 @@ public class TaxistaService {
         t.setTipoDocumento(req.tipoDocumento());
         t.setNumeroDocumento(req.numeroDocumento());
         t.setCorreo(req.correo().toLowerCase());
+        t.setFechaNacimiento(req.fechaNacimiento());
         t.setTelefono(req.telefono());
+        t.setDomicilio(req.domicilio());
         // Requerimiento de calidad: nunca en texto plano.
         t.setPasswordHash(passwordEncoder.encode(req.password()));
         t.setFotoUrl(req.fotoUrl());
@@ -200,6 +202,7 @@ public class TaxistaService {
         t.setNombres(req.nombres());
         t.setApellidos(req.apellidos());
         t.setTelefono(req.telefono());
+        t.setDomicilio(req.domicilio());
         t.setCorreo(correoNuevo);
         // En blanco = no cambiarla. Si viene con datos, se exige el mismo
         // minimo que en el registro y se hashea, nunca en texto plano.

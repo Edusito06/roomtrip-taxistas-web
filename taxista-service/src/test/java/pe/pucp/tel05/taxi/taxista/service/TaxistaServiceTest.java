@@ -187,9 +187,18 @@ class TaxistaServiceTest {
                 () -> servicio.actualizarPerfil("t7", perfilValido("propio@example.com", "AAA-111", "123")));
     }
 
+    @Test
+    @DisplayName("El registro guarda fecha de nacimiento y domicilio (datos exigidos por el plan de proyecto)")
+    void registroGuardaFechaNacimientoYDomicilio() {
+        Taxista creado = servicio.registrar(solicitudValida());
+
+        assertEquals(java.time.LocalDate.of(1990, 5, 20), creado.getFechaNacimiento());
+        assertEquals("Av. Larco 123, Miraflores", creado.getDomicilio());
+    }
+
     private ActualizarPerfilRequest perfilValido(String correo, String placa, String password) {
         return new ActualizarPerfilRequest(
-                "Juan", "Perez", "987654321", correo, password,
+                "Juan", "Perez", "987654321", "Av. Larco 123, Miraflores", correo, password,
                 "Toyota", "Yaris", "2020", "Blanco", placa,
                 "https://res.cloudinary.com/demo/foto.jpg",
                 "https://res.cloudinary.com/demo/vehiculo.jpg");
@@ -197,8 +206,8 @@ class TaxistaServiceTest {
 
     private RegistroTaxistaRequest solicitudValida() {
         return new RegistroTaxistaRequest(
-                "Juan", "Perez", "DNI", "70123456",
-                "juan.perez@example.com", "987654321", "secreto123",
+                "Juan", "Perez", "DNI", "70123456", java.time.LocalDate.of(1990, 5, 20),
+                "juan.perez@example.com", "987654321", "Av. Larco 123, Miraflores", "secreto123",
                 "https://res.cloudinary.com/demo/foto.jpg",
                 "Toyota", "Yaris", "2020", "Blanco", "ABC-123",
                 "https://res.cloudinary.com/demo/vehiculo.jpg");
