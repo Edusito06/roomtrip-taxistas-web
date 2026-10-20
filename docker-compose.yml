@@ -32,9 +32,9 @@ services:
     environment:
       MONGO_URI_REGISTRY: mongodb://mongo:27017/taxi_registry
       JWT_SECRET: ${JWT_SECRET:-secreto-de-desarrollo-no-usar-en-produccion-32}
-      SUPERADMIN_CORREO: ${SUPERADMIN_CORREO:-superadmin@hotelstay.pe}
+      SUPERADMIN_CORREO: ${SUPERADMIN_CORREO:-superadmin@roomtrip.pe}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-cambiame}
-      APP_MOVIL_CORREO: ${APP_MOVIL_CORREO:-app-movil@hotelstay.pe}
+      APP_MOVIL_CORREO: ${APP_MOVIL_CORREO:-app-movil@roomtrip.pe}
       APP_MOVIL_PASSWORD: ${APP_MOVIL_PASSWORD:-cambiame}
     ports:
       - "8081:8081"

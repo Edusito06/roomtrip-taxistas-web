@@ -12,10 +12,10 @@
   </parent>
 
   <groupId>pe.pucp.tel05</groupId>
-  <artifactId>hotelstay-taxi-web</artifactId>
+  <artifactId>roomtrip-taxi-web</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>HotelStay - Subsistema web de gestion de taxistas</name>
+  <name>RoomTrip - Subsistema web de gestion de taxistas</name>
   <description>MOD-WTX / MOD-API - Proyecto 1TEL05 Servicios y Aplicaciones para IoT (PUCP 2026-2)</description>
 
   <modules>
@@ -30,6 +30,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <spring-cloud.version>2025.0.0</spring-cloud.version>
     <cloudinary.version>1.39.0</cloudinary.version>
+    <!-- Docker 29+ exige API >= 1.40 y el cliente de Testcontainers 1.21 pide 1.32 -->
+    <argLine>-Dapi.version=1.44</argLine>
   </properties>
 
   <dependencyManagement>

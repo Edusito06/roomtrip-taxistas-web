@@ -35,7 +35,7 @@
 
   <div class="app-panel p-4 mb-3">
     <div th:if="${taxista.estadoHabilitacion == 'PENDIENTE'}" class="app-alert app-alert-danger"
-         style="background:#fffbeb; color:#92400e;">
+         style="background:var(--warn-bg); color:var(--warn);">
       <i class="bi bi-hourglass-split"></i>
       <span>Tu solicitud todavía está en revisión. Te habilitaremos apenas el Superadmin la apruebe.</span>
     </div>

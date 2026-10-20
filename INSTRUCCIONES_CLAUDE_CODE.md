@@ -197,7 +197,7 @@ Ejecuta esto en orden y verifica cada respuesta.
 ```bash
 TOKEN=$(curl -s -X POST localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"correo":"superadmin@hotelstay.pe","password":"TU_PASSWORD"}' \
+  -d '{"correo":"superadmin@roomtrip.pe","password":"TU_PASSWORD"}' \
   | python -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo $TOKEN
 ```
@@ -241,7 +241,7 @@ curl -s -X PATCH localhost:8080/api/taxistas/EL_ID/aprobacion \
 decidida no se vuelve a procesar.
 
 **Disponibilidad y consulta de la app móvil.** Marca al taxista como DISPONIBLE y luego consulta
-la lista con el token de `app-movil@hotelstay.pe`. Solo debe aparecer si está APROBADO y
+la lista con el token de `app-movil@roomtrip.pe`. Solo debe aparecer si está APROBADO y
 DISPONIBLE al mismo tiempo.
 
 **Degradación con gracia.** Este es el que más peso tiene en la sustentación:

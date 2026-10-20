@@ -6,7 +6,7 @@
 
   <parent>
     <groupId>pe.pucp.tel05</groupId>
-    <artifactId>hotelstay-taxi-web</artifactId>
+    <artifactId>roomtrip-taxi-web</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 

@@ -1,4 +1,4 @@
-# HotelStay - Subsistema web de gestión de taxistas
+# RoomTrip - Subsistema web de gestión de taxistas
 
 Subsistema 2 del proyecto del curso **1TEL05 Servicios y Aplicaciones para IoT** (PUCP, 2026-2).
 Cubre los módulos **MOD-WTX** (gestión web de taxistas) y **MOD-API** (API REST de integración)

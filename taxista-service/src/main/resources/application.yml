@@ -19,9 +19,9 @@ app:
     secret: ${JWT_SECRET:cambiame-por-un-secreto-largo-de-al-menos-32-caracteres}
     expiracion-minutos: ${JWT_EXPIRACION_MINUTOS:120}
   carga-inicial:
-    superadmin-correo: ${SUPERADMIN_CORREO:superadmin@hotelstay.pe}
+    superadmin-correo: ${SUPERADMIN_CORREO:superadmin@roomtrip.pe}
     superadmin-password: ${SUPERADMIN_PASSWORD:cambiame}
-    app-movil-correo: ${APP_MOVIL_CORREO:app-movil@hotelstay.pe}
+    app-movil-correo: ${APP_MOVIL_CORREO:app-movil@roomtrip.pe}
     app-movil-password: ${APP_MOVIL_PASSWORD:cambiame}
 
 management:
