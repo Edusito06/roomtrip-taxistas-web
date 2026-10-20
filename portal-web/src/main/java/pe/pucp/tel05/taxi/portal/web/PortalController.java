@@ -175,6 +175,51 @@ public class PortalController {
         }
     }
 
+    /** Servicios de taxi con el taxista asignado y, si esta en curso, su ultima ubicacion. */
+    @GetMapping("/admin/servicios")
+    public String servicios(HttpSession sesion, Model modelo, RedirectAttributes redirect) {
+        String token = token(sesion);
+        if (token == null) {
+            return "redirect:/login";
+        }
+        try {
+            Map<String, String> nombres = new HashMap<>();
+            for (Map<String, Object> t : api.listarTodos(token)) {
+                nombres.put(String.valueOf(t.get("id")), t.get("nombres") + " " + t.get("apellidos"));
+            }
+            List<Map<String, Object>> servicios = api.listarServicios(token);
+            for (Map<String, Object> s : servicios) {
+                Object taxistaId = s.get("taxistaId");
+                if (taxistaId == null) {
+                    continue;
+                }
+                s.put("taxistaNombre", nombres.getOrDefault(String.valueOf(taxistaId), "—"));
+                Object estado = s.get("estado");
+                if ("ASIGNADO".equals(estado) || "EN_CAMINO".equals(estado) || "EN_TRASLADO".equals(estado)) {
+                    try {
+                        Map<String, Object> u = api.ubicacionTaxista(token, String.valueOf(taxistaId));
+                        if (u.get("latitud") != null && u.get("longitud") != null) {
+                            s.put("latitud", u.get("latitud"));
+                            s.put("longitud", u.get("longitud"));
+                            s.put("ubicacionEn", u.get("actualizadaEn"));
+                        }
+                    } catch (TaxiApiClient.ApiException ignorada) {
+                        // Sin ubicacion todavia: la fila se muestra igual, sin boton de mapa.
+                    }
+                }
+            }
+            modelo.addAttribute("servicios", servicios);
+            modelo.addAttribute("enCurso", servicios.stream()
+                    .filter(s -> !"FINALIZADO".equals(s.get("estado"))).count());
+            modelo.addAttribute("finalizados", contar(servicios, "estado", "FINALIZADO"));
+            modelo.addAttribute("correo", sesion.getAttribute(SESION_CORREO));
+            return "admin/servicios";
+        } catch (TaxiApiClient.ApiException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/login";
+        }
+    }
+
     @GetMapping("/admin/eventos")
     public String eventos(HttpSession sesion, Model modelo, RedirectAttributes redirect) {
         String token = token(sesion);

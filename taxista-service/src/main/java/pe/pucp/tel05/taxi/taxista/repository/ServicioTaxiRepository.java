@@ -13,5 +13,7 @@ public interface ServicioTaxiRepository extends MongoRepository<ServicioTaxi, St
 
     List<ServicioTaxi> findByEstadoOrderByFechaSolicitudAsc(EstadoServicio estado);
 
+    List<ServicioTaxi> findTop100ByOrderByFechaSolicitudDesc();
+
     List<ServicioTaxi> findByTaxistaIdOrderByFechaSolicitudDesc(String taxistaId);
 }

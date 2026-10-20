@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Servicios')}"></head>
+<body>
+
+<nav th:replace="~{layout :: navbar('servicios')}"></nav>
+
+<div class="container pb-5">
+
+  <div class="mt-4 mb-1">
+    <span class="section-eyebrow"><i class="bi bi-taxi-front"></i> Traslados</span>
+    <h1 class="h3 fw-bold mb-0 mt-1">Servicios de taxi</h1>
+  </div>
+  <p class="text-muted mb-4">Traslados hotel → aeropuerto: estado actual y última ubicación del taxista asignado.</p>
+
+  <div th:replace="~{layout :: alertas}"></div>
+
+  <div class="row g-3 mb-4" th:unless="${#lists.isEmpty(servicios)}">
+    <div class="col-6 col-lg-3">
+      <div class="stat-card">
+        <span class="stat-card-icon" style="background:var(--brand-primary-soft); color:var(--brand-primary);">
+          <i class="bi bi-taxi-front-fill"></i>
+        </span>
+        <div>
+          <div class="stat-card-value" th:text="${#lists.size(servicios)}">0</div>
+          <div class="stat-card-label">Servicios recientes</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="stat-card">
+        <span class="stat-card-icon" style="background:var(--info-bg); color:var(--info);">
+          <i class="bi bi-geo-alt-fill"></i>
+        </span>
+        <div>
+          <div class="stat-card-value" th:text="${enCurso}">0</div>
+          <div class="stat-card-label">En curso</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="stat-card">
+        <span class="stat-card-icon" style="background:var(--ok-bg); color:var(--ok);">
+          <i class="bi bi-check-circle-fill"></i>
+        </span>
+        <div>
+          <div class="stat-card-value" th:text="${finalizados}">0</div>
+          <div class="stat-card-label">Finalizados</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty-state app-panel" th:if="${#lists.isEmpty(servicios)}">
+    <i class="bi bi-taxi-front"></i>
+    <p class="mb-0 fw-semibold">Todavía no hay servicios de taxi.</p>
+    <p class="small mb-0">Aparecerán cuando la app móvil solicite un traslado.</p>
+  </div>
+
+  <div class="app-panel" th:unless="${#lists.isEmpty(servicios)}">
+    <div class="table-responsive">
+      <table id="tablaServicios" class="table app-table table-hover align-middle mb-0"
+             data-paginate data-page-size="8">
+        <thead>
+        <tr>
+          <th>Traslado</th>
+          <th>Taxista</th>
+          <th>Estado</th>
+          <th>Solicitado</th>
+          <th class="text-end">Ubicación</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${servicios}">
+          <td>
+            <div class="fw-semibold" th:text="${s.hotelNombre}">Hotel</div>
+            <div class="small text-muted"><i class="bi bi-airplane"></i> <span th:text="${s.aeropuertoDestino}">Aeropuerto</span></div>
+          </td>
+          <td>
+            <span th:if="${s['taxistaNombre'] != null}" th:text="${s['taxistaNombre']}">Taxista</span>
+            <span th:unless="${s['taxistaNombre'] != null}" class="text-muted small">Sin asignar</span>
+          </td>
+          <td>
+            <span class="badge"
+                  th:classappend="${s.estado == 'SOLICITADO'} ? 'text-bg-warning'
+                                : (${s.estado == 'FINALIZADO'} ? 'text-bg-success'
+                                : (${s.estado == 'ASIGNADO'} ? 'text-bg-primary' : 'text-bg-info'))"
+                  th:text="${s.estado}">ESTADO</span>
+          </td>
+          <td class="small text-nowrap"
+              th:text="${#strings.replace(#strings.substring(s.fechaSolicitud,0,16),'T',' ')}">2026-10-20 10:00</td>
+          <td class="text-end">
+            <button type="button" class="btn btn-sm btn-outline-primary" th:if="${s['latitud'] != null}"
+                    data-bs-toggle="modal" data-bs-target="#modalMapa"
+                    th:data-lat="${s['latitud']}" th:data-lng="${s['longitud']}"
+                    th:data-titulo="${s['taxistaNombre']} + ' · ' + ${s.hotelNombre}"
+                    th:data-hora="${s['ubicacionEn']}">
+              <i class="bi bi-geo-alt me-1"></i>Ver mapa
+            </button>
+            <span th:unless="${s['latitud'] != null}" class="text-muted small">—</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <nav class="app-pagination" data-pagination-for="tablaServicios"></nav>
+  </div>
+
+</div>
+
+<!-- Mapa de OpenStreetMap incrustado: no requiere clave ni librerias de JS -->
+<div class="modal fade" id="modalMapa" tabindex="-1" aria-labelledby="mapaTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content" style="border-radius: var(--radius-lg); overflow: hidden;">
+      <div class="modal-header border-0">
+        <div>
+          <h2 class="h6 fw-bold mb-0" id="mapaTitulo">Ubicación</h2>
+          <div class="small text-muted" id="mapaHora"></div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body p-0">
+        <iframe id="mapaFrame" title="Mapa" style="width:100%; height:420px; border:0;" loading="lazy"></iframe>
+      </div>
+      <div class="modal-footer border-0 justify-content-between">
+        <span class="small text-muted">Mapa de OpenStreetMap</span>
+        <a id="mapaEnlace" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Abrir en OpenStreetMap
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div th:replace="~{layout :: scripts}"></div>
+<script th:src="@{/js/app.js}"></script>
+<script>
+  document.getElementById('modalMapa').addEventListener('show.bs.modal', function (ev) {
+    var b = ev.relatedTarget;
+    var lat = parseFloat(b.dataset.lat), lng = parseFloat(b.dataset.lng), d = 0.008;
+    document.getElementById('mapaTitulo').textContent = b.dataset.titulo;
+    document.getElementById('mapaHora').textContent = b.dataset.hora ? 'Última ubicación: ' + b.dataset.hora.replace('T', ' ').substring(0, 19) + ' UTC' : '';
+    document.getElementById('mapaEnlace').href = 'https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lng + '#map=16/' + lat + '/' + lng;
+    document.getElementById('mapaFrame').src = 'https://www.openstreetmap.org/export/embed.html?bbox='
+      + (lng - d) + ',' + (lat - d) + ',' + (lng + d) + ',' + (lat + d)
+      + '&layer=mapnik&marker=' + lat + ',' + lng;
+  });
+  document.getElementById('modalMapa').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('mapaFrame').src = 'about:blank';
+  });
+</script>
+</body>
+</html>

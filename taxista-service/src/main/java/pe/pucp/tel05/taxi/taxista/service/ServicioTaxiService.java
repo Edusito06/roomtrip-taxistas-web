@@ -49,6 +49,11 @@ public class ServicioTaxiService {
         return servicios.findByEstadoOrderByFechaSolicitudAsc(EstadoServicio.SOLICITADO);
     }
 
+    /** Vista del Superadmin: los 100 servicios mas recientes. */
+    public List<ServicioTaxi> recientes() {
+        return servicios.findTop100ByOrderByFechaSolicitudDesc();
+    }
+
     public List<ServicioTaxi> deTaxista(String taxistaId) {
         return servicios.findByTaxistaIdOrderByFechaSolicitudDesc(taxistaId);
     }

@@ -61,6 +61,24 @@ public class TaxiApiClient {
                 .body(new org.springframework.core.ParameterizedTypeReference<List<Map<String, Object>>>() { }));
     }
 
+    /** Servicios de taxi recientes (Superadmin). */
+    public List<Map<String, Object>> listarServicios(String token) {
+        return ejecutar(() -> restClient.get()
+                .uri("/api/servicios")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .body(new org.springframework.core.ParameterizedTypeReference<List<Map<String, Object>>>() { }));
+    }
+
+    /** Ultima ubicacion reportada por un taxista. */
+    public Map<String, Object> ubicacionTaxista(String token, String id) {
+        return ejecutar(() -> restClient.get()
+                .uri("/api/taxistas/{id}/ubicacion", id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .body(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() { }));
+    }
+
     /** Log de eventos para el Superadmin. */
     public List<Map<String, Object>> listarEventos(String token) {
         return ejecutar(() -> restClient.get()

@@ -119,6 +119,9 @@ Todo pasa por el gateway. El flujo de la app móvil es:
 | PATCH | `/api/servicios/{id}/estado` | TAXISTA asignado | ASIGNADO → EN_CAMINO → EN_TRASLADO |
 | POST | `/api/servicios/{id}/finalizar` | TAXISTA asignado | EN_TRASLADO → FINALIZADO validando el QR |
 | GET | `/api/eventos` | SUPERADMIN | Log de eventos relevantes |
+| GET | `/api/servicios` | SUPERADMIN | Servicios de taxi recientes (panel del Superadmin) |
+
+El detalle de cada endpoint (cuerpos, errores, flujo y esqueleto de Retrofit para la app) está en [`docs/API.md`](docs/API.md).
 
 Cuando un servicio de atrás no responde, el gateway devuelve **503** con este cuerpo, que es
 exactamente lo que la app móvil necesita para mostrar el aviso sin romper las reservas

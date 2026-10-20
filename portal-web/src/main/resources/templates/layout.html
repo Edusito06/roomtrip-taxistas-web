@@ -34,6 +34,10 @@
            th:classappend="${activo == 'taxistas'} ? 'active' : ''">
           <i class="bi bi-people me-1"></i>Padrón de taxistas
         </a>
+        <a class="nav-link" th:href="@{/admin/servicios}"
+           th:classappend="${activo == 'servicios'} ? 'active' : ''">
+          <i class="bi bi-taxi-front me-1"></i>Servicios
+        </a>
         <a class="nav-link" th:href="@{/admin/eventos}"
            th:classappend="${activo == 'eventos'} ? 'active' : ''">
           <i class="bi bi-clock-history me-1"></i>Eventos

@@ -55,6 +55,13 @@ public class ServicioTaxiController {
                 .body(ServicioResponse.desde(s, true));
     }
 
+    /** Panel del Superadmin: servicios recientes en cualquier estado. */
+    @GetMapping
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public List<ServicioResponse> recientes() {
+        return servicio.recientes().stream().map(s -> ServicioResponse.desde(s, true)).toList();
+    }
+
     /** Pedidos que un taxista puede aceptar. */
     @GetMapping("/solicitados")
     @PreAuthorize("hasAnyRole('SUPERADMIN','APP_MOVIL','TAXISTA')")

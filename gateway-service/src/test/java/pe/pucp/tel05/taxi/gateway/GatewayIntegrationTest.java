@@ -159,6 +159,35 @@ class GatewayIntegrationTest {
                 .jsonPath("$.status").isEqualTo(503);
     }
 
+    /**
+     * La app movil tambien usa PATCH (estado, disponibilidad) y PUT (ubicacion):
+     * con el circuito abierto deben recibir el mismo 503 legible y no un 405.
+     * Depende de que la prueba anterior haya dejado el circuito abierto.
+     */
+    @Test
+    @Order(4)
+    void conElCircuitoAbiertoPatchYPutTambienRecibenElMensaje503() {
+        String token = token("APP_MOVIL");
+
+        webTestClient.patch().uri("/api/servicios/s1/estado")
+                .header("Authorization", "Bearer " + token)
+                .bodyValue("{\"estado\":\"EN_CAMINO\"}")
+                .header("Content-Type", "application/json")
+                .exchange()
+                .expectStatus().isEqualTo(503)
+                .expectBody()
+                .jsonPath("$.error").isEqualTo("SERVICIO_NO_DISPONIBLE");
+
+        webTestClient.put().uri("/api/taxistas/t1/ubicacion")
+                .header("Authorization", "Bearer " + token)
+                .bodyValue("{\"latitud\":-12.0,\"longitud\":-77.0}")
+                .header("Content-Type", "application/json")
+                .exchange()
+                .expectStatus().isEqualTo(503)
+                .expectBody()
+                .jsonPath("$.error").isEqualTo("SERVICIO_NO_DISPONIBLE");
+    }
+
     private String token(String rol) {
         try {
             Instant ahora = Instant.now();
