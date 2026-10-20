@@ -4,7 +4,8 @@ Subsistema 2 del proyecto del curso **1TEL05 Servicios y Aplicaciones para IoT**
 Cubre los módulos **MOD-WTX** (gestión web de taxistas) y **MOD-API** (API REST de integración)
 definidos en el ERS v1.0 del proyecto.
 
-La app móvil Android es un repositorio aparte. Estos dos sistemas solo se hablan por la API REST
+La app móvil Android es un repositorio aparte: [Markernan/roomtrip](https://github.com/Markernan/roomtrip).
+Estos dos sistemas solo se hablan por la API REST
 que expone el gateway de este repositorio, nunca por base de datos (RES-04, RF-WTX-008).
 
 ---
