@@ -27,8 +27,28 @@ jobs:
           cache: maven
       - run: mvn -B clean verify
 
+  # Los secrets no se pueden evaluar en un `if` de job, asi que se comprueba aqui. Mientras
+  # no esten GCP_PROJECT_ID y GCP_SA_KEY el despliegue se omite en lugar de fallar.
+  credenciales:
+    runs-on: ubuntu-latest
+    outputs:
+      listas: ${{ steps.revisar.outputs.listas }}
+    steps:
+      - id: revisar
+        env:
+          PROYECTO: ${{ secrets.GCP_PROJECT_ID }}
+          CLAVE: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          if [ -n "$PROYECTO" ] && [ -n "$CLAVE" ]; then
+            echo "listas=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "listas=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Despliegue omitido: faltan los secrets GCP_PROJECT_ID y GCP_SA_KEY (ver docs/DESPLIEGUE.md)."
+          fi
+
   desplegar:
-    needs: verificar
+    needs: [verificar, credenciales]
+    if: needs.credenciales.outputs.listas == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
