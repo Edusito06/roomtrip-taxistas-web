@@ -151,6 +151,11 @@ a {
   color: var(--danger);
 }
 
+.app-alert-warning {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
 .app-alert-success {
   background: var(--ok-bg);
   color: var(--ok);

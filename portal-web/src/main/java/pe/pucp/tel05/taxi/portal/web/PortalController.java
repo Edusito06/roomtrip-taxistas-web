@@ -55,7 +55,10 @@ public class PortalController {
     // ------------------------------------------------------------------
 
     @GetMapping("/login")
-    public String login() {
+    public String login(@RequestParam(value = "expirada", required = false) String expirada, Model modelo) {
+        if (expirada != null) {
+            modelo.addAttribute("aviso", "Tu sesión expiró por inactividad. Inicia sesión nuevamente.");
+        }
         return "login";
     }
 

@@ -82,6 +82,10 @@
     <i class="bi bi-exclamation-triangle-fill"></i>
     <span th:text="${error}"></span>
   </div>
+  <div th:if="${aviso}" class="app-alert app-alert-warning" role="status">
+    <i class="bi bi-clock-history"></i>
+    <span th:text="${aviso}"></span>
+  </div>
   <div th:if="${exito}" class="app-alert app-alert-success" role="alert">
     <i class="bi bi-check-circle-fill"></i>
     <span th:text="${exito}"></span>
