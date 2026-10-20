@@ -82,6 +82,7 @@ services:
       GATEWAY_URL: http://gateway-service:8080
       THYMELEAF_CACHE: "false"
       CLOUDINARY_URL: ${CLOUDINARY_URL:-}
+      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-30m}
     ports:
       - "8083:8083"
 

@@ -1,5 +1,12 @@
 server:
   port: ${PORT:8083}
+  servlet:
+    session:
+      # Inactividad maxima: pasado este tiempo sin pedidos, la sesion expira y se pide login de nuevo.
+      timeout: ${SESSION_TIMEOUT:30m}
+      cookie:
+        http-only: true
+        same-site: lax
 
 spring:
   application:
