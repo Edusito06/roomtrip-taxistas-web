@@ -86,6 +86,15 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 
 ### 5. Desplegar
 
+**Camino corto:** `scripts/deploy-cloudrun.sh` hace todo lo de este paso (construir, subir, desplegar
+en orden y verificar `/actuator/health`). Es el mismo script que usa el workflow del paso 7.
+
+```bash
+PROJECT_ID=TU_PROJECT_ID ./scripts/deploy-cloudrun.sh v1
+```
+
+El detalle manual de abajo sirve para entender qué hace y para depurar un servicio suelto.
+
 El orden importa: los servicios de dominio primero, porque el gateway necesita sus URLs, y el
 portal al final porque necesita la URL del gateway.
 
@@ -105,12 +114,16 @@ gcloud run deploy taxista-service \
   --image $REPO/taxista-service:v1 \
   --region $REGION --allow-unauthenticated \
   --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3 \
-  --set-secrets "JWT_SECRET=jwt-secret:latest,MONGO_URI_REGISTRY=mongo-uri-registry:latest,CLOUDINARY_URL=cloudinary-url:latest,SUPERADMIN_PASSWORD=superadmin-password:latest,APP_MOVIL_PASSWORD=app-movil-password:latest"
+  --set-secrets "JWT_SECRET=jwt-secret:latest,MONGO_URI_REGISTRY=mongo-uri-registry:latest,SUPERADMIN_PASSWORD=superadmin-password:latest,APP_MOVIL_PASSWORD=app-movil-password:latest"
 ```
 
 **5.2 calificacion-service**
 
+Necesita la URL de `taxista-service`: empuja allí la valoración promedio (RN-013).
+
 ```bash
+TAXISTA_URL=$(gcloud run services describe taxista-service --region $REGION --format 'value(status.url)')
+
 docker build -f calificacion-service/Dockerfile -t $REPO/calificacion-service:v1 .
 docker push $REPO/calificacion-service:v1
 
@@ -118,6 +131,7 @@ gcloud run deploy calificacion-service \
   --image $REPO/calificacion-service:v1 \
   --region $REGION --allow-unauthenticated \
   --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3 \
+  --set-env-vars "TAXISTA_SERVICE_URL=$TAXISTA_URL" \
   --set-secrets "JWT_SECRET=jwt-secret:latest,MONGO_URI_RATINGS=mongo-uri-ratings:latest"
 ```
 
@@ -150,8 +164,11 @@ gcloud run deploy portal-web \
   --image $REPO/portal-web:v1 \
   --region $REGION --allow-unauthenticated \
   --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3 \
-  --set-env-vars "GATEWAY_URL=$GATEWAY_URL"
+  --set-env-vars "GATEWAY_URL=$GATEWAY_URL,THYMELEAF_CACHE=true" \
+  --set-secrets "CLOUDINARY_URL=cloudinary-url:latest"
 ```
+
+El portal es quien sube las fotos a Cloudinary, por eso lleva `CLOUDINARY_URL` y `taxista-service` no.
 
 La URL del portal que imprime el último comando es la que se entrega al profesor.
 
@@ -171,7 +188,17 @@ mejora que más sube la nota en la parte de seguridad, pero déjenla para cuando
 ### 7. Automatizar
 
 Con `GCP_PROJECT_ID` y `GCP_SA_KEY` cargados como secrets del repositorio, el workflow
-`.github/workflows/deploy-cloudrun.yml` hace todo lo anterior en cada merge a `main`.
+`.github/workflows/deploy-cloudrun.yml` corre `mvn verify` y luego `scripts/deploy-cloudrun.sh` en
+cada merge a `main`. El workflow `.github/workflows/ci.yml` compila y prueba en cada PR.
+
+La cuenta de servicio de `GCP_SA_KEY` necesita los roles Cloud Run Admin, Artifact Registry Writer,
+Service Account User y Secret Manager Secret Accessor. Para esa cuenta se crea la clave JSON con:
+
+```bash
+gcloud iam service-accounts keys create key.json --iam-account=NOMBRE@TU_PROJECT_ID.iam.gserviceaccount.com
+```
+
+Pega el contenido de `key.json` en el secret de GitHub y borra el archivo local. No lo commitees.
 
 ---
 
@@ -221,6 +248,7 @@ el arranque en frío y el tamaño de la base, y ambas son ajustables sin tocar e
 
 ## Checklist antes de la presentación prefinal (14/12/2026)
 
+- [ ] `./scripts/deploy-cloudrun.sh` termina sin `FAIL`.
 - [ ] Los cuatro servicios responden en sus URLs de Cloud Run.
 - [ ] El `/actuator/health` de cada uno devuelve `UP`.
 - [ ] Un taxista se puede autoregistrar desde el portal en producción.
