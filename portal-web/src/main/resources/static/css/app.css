@@ -562,6 +562,88 @@ a {
   flex: none;
 }
 
+/* ---------- Tarjeta de solicitud (como item_superadmin_usuario de la app) ---------- */
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.solicitud-card {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+}
+
+.avatar-lg {
+  width: 3rem;
+  height: 3rem;
+  font-size: 1rem;
+}
+
+.solicitud-datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem 1rem;
+  margin: 0;
+}
+
+.solicitud-datos dt {
+  font-size: .72rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.solicitud-datos dd {
+  margin: 0;
+  font-size: .9rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.solicitud-fotos {
+  display: flex;
+  gap: .75rem;
+}
+
+.solicitud-fotos a {
+  position: relative;
+  display: block;
+  width: 7rem;
+  height: 5rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--brand-primary-soft);
+}
+
+.solicitud-fotos img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.solicitud-fotos span {
+  position: absolute;
+  left: .4rem;
+  bottom: .35rem;
+  font-size: .7rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .6);
+}
+
+@media (max-width: 576px) {
+  .solicitud-datos {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------- Stat cards ---------- */
 
 .stat-card {

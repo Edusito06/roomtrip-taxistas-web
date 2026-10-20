@@ -6,6 +6,15 @@ spring:
     name: portal-web
   thymeleaf:
     cache: ${THYMELEAF_CACHE:false}
+  web:
+    resources:
+      chain:
+        # app.css y app.js salen como /css/app-<hash>.css: cada despliegue cambia la URL y el
+        # navegador nunca se queda con una hoja de estilos vieja.
+        strategy:
+          content:
+            enabled: true
+            paths: /css/**,/js/**
   servlet:
     multipart:
       max-file-size: 5MB

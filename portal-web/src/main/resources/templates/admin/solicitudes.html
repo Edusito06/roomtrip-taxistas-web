@@ -25,71 +25,62 @@
     <p class="small mb-0">Las nuevas solicitudes de autoregistro aparecerán aquí.</p>
   </div>
 
-  <div class="app-panel" th:unless="${#lists.isEmpty(pendientes)}">
-    <div class="table-responsive">
-      <table id="tablaSolicitudes" class="table app-table table-hover align-middle mb-0"
-             data-paginate data-page-size="8">
-        <thead>
-        <tr>
-          <th>Taxista</th>
-          <th>Documento</th>
-          <th>Contacto</th>
-          <th>Vehículo</th>
-          <th>Fotos</th>
-          <th class="text-end">Decisión</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="t : ${pendientes}">
-          <td>
-            <div class="d-flex align-items-center gap-3">
-              <span class="avatar-circle"
-                    th:text="${#strings.substring(t.nombres,0,1)} + ${#strings.substring(t.apellidos,0,1)}">JP</span>
-              <span class="fw-semibold" th:text="${t.nombres} + ' ' + ${t.apellidos}">Nombre</span>
-            </div>
-          </td>
-          <td class="small text-muted" th:text="${t.numeroDocumento}">00000000</td>
-          <td class="small">
-            <div th:text="${t.correo}">correo</div>
-            <div class="text-muted" th:text="${t.telefono}">telefono</div>
-          </td>
-          <td class="small">
-            <div th:text="${t.vehiculoMarca} + ' ' + ${t.vehiculoModelo}">Marca Modelo</div>
-            <div class="text-muted">
-              <span th:text="${t.vehiculoColor}">Color</span> &middot;
-              <span class="badge text-bg-secondary" th:text="${t.placa}">ABC-123</span>
-            </div>
-          </td>
-          <td class="small">
-            <a class="me-2" th:href="${t.fotoUrl}" target="_blank" rel="noopener">
-              <i class="bi bi-person-square"></i> Taxista
-            </a>
-            <a th:href="${t.fotoVehiculoUrl}" target="_blank" rel="noopener">
-              <i class="bi bi-car-front"></i> Vehículo
-            </a>
-          </td>
-          <td class="text-end text-nowrap">
-            <form th:action="@{'/admin/solicitudes/' + ${t.id} + '/decidir'}"
-                  method="post" class="d-inline">
-              <input type="hidden" name="aprobado" value="true">
-              <button class="btn btn-sm btn-accent" type="submit">
-                <i class="bi bi-check-lg"></i> Aprobar
-              </button>
-            </form>
-            <form th:action="@{'/admin/solicitudes/' + ${t.id} + '/decidir'}"
-                  method="post" class="d-inline">
-              <input type="hidden" name="aprobado" value="false">
-              <input type="hidden" name="motivo" value="Documentación incompleta">
-              <button class="btn btn-sm btn-outline-danger" type="submit">
-                <i class="bi bi-x-lg"></i> Rechazar
-              </button>
-            </form>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+  <div class="row g-3" th:unless="${#lists.isEmpty(pendientes)}">
+    <div class="col-12 col-xl-6" th:each="t : ${pendientes}">
+      <article class="solicitud-card">
+        <header class="d-flex align-items-center gap-3">
+          <span class="avatar-circle avatar-lg"
+                th:text="${#strings.substring(t.nombres,0,1)} + ${#strings.substring(t.apellidos,0,1)}">JP</span>
+          <div class="min-w-0">
+            <h2 class="h6 fw-bold mb-0" th:text="${t.nombres} + ' ' + ${t.apellidos}">Nombre</h2>
+            <div class="small text-muted text-truncate" th:text="${t.correo}">correo</div>
+          </div>
+          <span class="badge text-bg-warning ms-auto">PENDIENTE</span>
+        </header>
+
+        <dl class="solicitud-datos">
+          <div><dt><i class="bi bi-person-vcard"></i> Documento</dt>
+               <dd th:text="${t.tipoDocumento} + ' ' + ${t.numeroDocumento}">DNI 00000000</dd></div>
+          <div><dt><i class="bi bi-cake2"></i> Nacimiento</dt>
+               <dd th:text="${t.fechaNacimiento} ?: '—'">—</dd></div>
+          <div><dt><i class="bi bi-telephone"></i> Teléfono</dt>
+               <dd th:text="${t.telefono}">telefono</dd></div>
+          <div><dt><i class="bi bi-geo-alt"></i> Domicilio</dt>
+               <dd th:text="${t.domicilio} ?: '—'">—</dd></div>
+          <div><dt><i class="bi bi-car-front"></i> Vehículo</dt>
+               <dd><span th:text="${t.vehiculoMarca} + ' ' + ${t.vehiculoModelo} + ' ' + ${t.vehiculoAnio} + ', ' + ${t.vehiculoColor}">Marca Modelo</span></dd></div>
+          <div><dt><i class="bi bi-123"></i> Placa</dt>
+               <dd><span class="badge text-bg-secondary" th:text="${t.placa}">ABC-123</span></dd></div>
+        </dl>
+
+        <div class="solicitud-fotos">
+          <a th:href="${t.fotoUrl}" target="_blank" rel="noopener" title="Foto del taxista">
+            <img th:src="${t.fotoUrl}" alt="Foto del taxista">
+            <span>Taxista</span>
+          </a>
+          <a th:href="${t.fotoVehiculoUrl}" target="_blank" rel="noopener" title="Foto del vehículo">
+            <img th:src="${t.fotoVehiculoUrl}" alt="Foto del vehículo">
+            <span>Vehículo</span>
+          </a>
+        </div>
+
+        <footer class="d-flex gap-2 justify-content-end">
+          <form th:action="@{'/admin/solicitudes/' + ${t.id} + '/decidir'}" method="post">
+            <input type="hidden" name="aprobado" value="false">
+            <input type="hidden" name="motivo" value="Documentación incompleta">
+            <button class="btn btn-outline-danger" type="submit">
+              <i class="bi bi-x-lg me-1"></i>Rechazar
+            </button>
+          </form>
+          <form th:action="@{'/admin/solicitudes/' + ${t.id} + '/decidir'}" method="post">
+            <input type="hidden" name="aprobado" value="true">
+            <button class="btn btn-primary" type="submit">
+              <i class="bi bi-check-lg me-1"></i>Aprobar
+            </button>
+          </form>
+        </footer>
+      </article>
     </div>
-    <nav class="app-pagination" data-pagination-for="tablaSolicitudes"></nav>
   </div>
 
 </div>
