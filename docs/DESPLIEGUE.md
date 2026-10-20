@@ -73,6 +73,12 @@ echo -n "UNA_CLAVE_FUERTE" | gcloud secrets create superadmin-password --data-fi
 echo -n "OTRA_CLAVE_FUERTE" | gcloud secrets create app-movil-password --data-file=-
 ```
 
+Las claves deben tener **al menos 12 caracteres** y no pueden ser `cambiame`. El script de despliegue
+activa `EXIGIR_CLAVES_FUERTES=true` en `taxista-service`: si `JWT_SECRET`, `SUPERADMIN_PASSWORD` o
+`APP_MOVIL_PASSWORD` son por defecto o cortas, el servicio **se niega a arrancar** en vez de quedar expuesto.
+Para rotar una clave, cambia el secreto en Secret Manager y vuelve a desplegar: al arrancar, el servicio
+actualiza la contraseña de la cuenta existente.
+
 ### 4. Repositorio de imágenes
 
 ```bash

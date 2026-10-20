@@ -23,6 +23,8 @@ app:
     superadmin-password: ${SUPERADMIN_PASSWORD:cambiame}
     app-movil-correo: ${APP_MOVIL_CORREO:app-movil@roomtrip.pe}
     app-movil-password: ${APP_MOVIL_PASSWORD:cambiame}
+    # true en produccion: el servicio no arranca con claves por defecto (ver CargaInicial)
+    exigir-claves-fuertes: ${EXIGIR_CLAVES_FUERTES:false}
 
 management:
   endpoints:

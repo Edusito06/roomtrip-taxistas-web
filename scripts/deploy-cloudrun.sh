@@ -40,7 +40,7 @@ done
 
 echo "==> Desplegando taxista-service"
 gcloud run deploy taxista-service --image "${REPO}/taxista-service:${TAG}" "${COMUN[@]}" \
-  --set-env-vars "SUPERADMIN_CORREO=${SUPERADMIN_CORREO},APP_MOVIL_CORREO=${APP_MOVIL_CORREO}" \
+  --set-env-vars "SUPERADMIN_CORREO=${SUPERADMIN_CORREO},APP_MOVIL_CORREO=${APP_MOVIL_CORREO},EXIGIR_CLAVES_FUERTES=true" \
   --set-secrets "JWT_SECRET=jwt-secret:latest,MONGO_URI_REGISTRY=mongo-uri-registry:latest,SUPERADMIN_PASSWORD=superadmin-password:latest,APP_MOVIL_PASSWORD=app-movil-password:latest"
 TAXISTA_URL="$(url_de taxista-service)"
 
