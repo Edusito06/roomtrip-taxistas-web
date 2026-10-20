@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Eventos')}"></head>
+<body>
+
+<nav th:replace="~{layout :: navbar('eventos')}"></nav>
+
+<div class="container pb-5">
+
+  <div class="mt-4 mb-1">
+    <span class="section-eyebrow"><i class="bi bi-clock-history"></i> Auditoría</span>
+    <h1 class="h3 fw-bold mb-0 mt-1">Eventos del sistema</h1>
+  </div>
+  <p class="text-muted mb-4">Últimos 200 eventos relevantes: registros, aprobaciones, inicios de sesión y servicios de taxi.</p>
+
+  <div th:replace="~{layout :: alertas}"></div>
+
+  <div class="empty-state app-panel" th:if="${#lists.isEmpty(eventos)}">
+    <i class="bi bi-clock-history"></i>
+    <p class="mb-0 fw-semibold">Todavía no hay eventos registrados.</p>
+  </div>
+
+  <div class="app-panel" th:unless="${#lists.isEmpty(eventos)}">
+    <div class="table-responsive">
+      <table id="tablaEventos" class="table app-table table-hover align-middle mb-0"
+             data-paginate data-page-size="10">
+        <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Evento</th>
+          <th>Actor</th>
+          <th>Detalle</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="e : ${eventos}">
+          <td class="text-nowrap small" th:text="${#strings.replace(#strings.substring(e.fecha,0,19),'T',' ')}">2026-10-20 10:00:00</td>
+          <td>
+            <span class="badge"
+                  th:classappend="${#strings.contains(e.tipo,'FALLIDO') or #strings.contains(e.tipo,'RECHAZADO')} ? 'text-bg-danger'
+                                : (${#strings.contains(e.tipo,'APROBADO') or #strings.contains(e.tipo,'FINALIZADO') or e.tipo == 'LOGIN_OK'} ? 'text-bg-success'
+                                : (${#strings.startsWith(e.tipo,'SERVICIO')} ? 'text-bg-info' : 'text-bg-primary'))"
+                  th:text="${e.tipo}">TIPO</span>
+          </td>
+          <td class="small" th:text="${e.actor}">actor</td>
+          <td class="small text-muted" th:text="${e.detalle}">detalle</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <nav class="app-pagination" data-pagination-for="tablaEventos"></nav>
+  </div>
+
+</div>
+
+<div th:replace="~{layout :: scripts}"></div>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

@@ -34,6 +34,10 @@
            th:classappend="${activo == 'taxistas'} ? 'active' : ''">
           <i class="bi bi-people me-1"></i>Padrón de taxistas
         </a>
+        <a class="nav-link" th:href="@{/admin/eventos}"
+           th:classappend="${activo == 'eventos'} ? 'active' : ''">
+          <i class="bi bi-clock-history me-1"></i>Eventos
+        </a>
       </div>
       <form th:action="@{/logout}" method="post" class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
         <span class="app-user-chip">

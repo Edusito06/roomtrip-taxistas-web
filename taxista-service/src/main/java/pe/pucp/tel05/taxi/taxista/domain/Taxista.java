@@ -50,6 +50,11 @@ public class Taxista {
     private double valoracionPromedio;
     private long totalCalificaciones;
 
+    // --- Ubicacion (se reporta solo durante un servicio activo) ---
+    private Double ubicacionLatitud;
+    private Double ubicacionLongitud;
+    private Instant ubicacionFecha;
+
     // --- Auditoria (MOD-LOG) ---
     private Instant fechaRegistro = Instant.now();
     private Instant fechaActualizacion = Instant.now();
@@ -237,5 +242,23 @@ public class Taxista {
 
     public void setDecididoPor(String decididoPor) {
         this.decididoPor = decididoPor;
+    }
+
+    public Double getUbicacionLatitud() {
+        return ubicacionLatitud;
+    }
+
+    public Double getUbicacionLongitud() {
+        return ubicacionLongitud;
+    }
+
+    public Instant getUbicacionFecha() {
+        return ubicacionFecha;
+    }
+
+    public void setUbicacion(Double latitud, Double longitud, Instant fecha) {
+        this.ubicacionLatitud = latitud;
+        this.ubicacionLongitud = longitud;
+        this.ubicacionFecha = fecha;
     }
 }

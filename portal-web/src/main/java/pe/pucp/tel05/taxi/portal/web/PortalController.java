@@ -175,6 +175,22 @@ public class PortalController {
         }
     }
 
+    @GetMapping("/admin/eventos")
+    public String eventos(HttpSession sesion, Model modelo, RedirectAttributes redirect) {
+        String token = token(sesion);
+        if (token == null) {
+            return "redirect:/login";
+        }
+        try {
+            modelo.addAttribute("eventos", api.listarEventos(token));
+            modelo.addAttribute("correo", sesion.getAttribute(SESION_CORREO));
+            return "admin/eventos";
+        } catch (TaxiApiClient.ApiException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+            return "redirect:/login";
+        }
+    }
+
     private long contar(List<Map<String, Object>> taxistas, String campo, String valor) {
         return taxistas.stream().filter(t -> valor.equals(t.get(campo))).count();
     }

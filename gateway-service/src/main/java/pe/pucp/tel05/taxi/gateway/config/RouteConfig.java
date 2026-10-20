@@ -34,7 +34,7 @@ public class RouteConfig {
         return builder.routes()
                 // Dominio taxista: autoregistro, aprobacion, datos, disponibilidad
                 .route("taxista-service", r -> r
-                        .path("/api/taxistas/**", "/api/auth/**")
+                        .path("/api/taxistas/**", "/api/auth/**", "/api/servicios/**", "/api/eventos/**")
                         .filters(f -> f.circuitBreaker(cb -> cb
                                 .setName("taxistaCB")
                                 .setFallbackUri("forward:/fallback/taxistas")))

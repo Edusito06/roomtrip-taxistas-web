@@ -139,6 +139,19 @@ public class TaxistaService {
         return repositorio.save(t);
     }
 
+    /**
+     * Ubicacion periodica del taxista. Solo se acepta durante un servicio
+     * activo (EN_SERVICIO): fuera de uno no hay nada que rastrear.
+     */
+    public Taxista actualizarUbicacion(String id, double latitud, double longitud) {
+        Taxista t = obtener(id);
+        if (t.getEstadoDisponibilidad() != EstadoDisponibilidad.EN_SERVICIO) {
+            throw new ReglaNegocioException("La ubicacion solo se registra durante un servicio activo");
+        }
+        t.setUbicacion(latitud, longitud, Instant.now());
+        return repositorio.save(t);
+    }
+
     /** RF-API-001: los unicos taxistas asignables por la app movil. */
     public List<Taxista> listarDisponibles() {
         return repositorio.findByEstadoHabilitacionAndEstadoDisponibilidad(

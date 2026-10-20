@@ -57,7 +57,7 @@ Requisitos: Docker Desktop, JDK 21 y Maven 3.9 o superior.
 
 ```bash
 git clone <url-del-repo>
-cd hotelstay-taxi-web
+cd roomtrip-taxi-web
 cp .env.example .env     # editar JWT_SECRET y las contraseñas iniciales
 docker compose up --build
 ```
@@ -109,6 +109,15 @@ Todo pasa por el gateway. El flujo de la app móvil es:
 | PATCH | `/api/taxistas/{id}/disponibilidad` | SUPERADMIN, APP_MOVIL, el propio taxista | RF-WTX-007 |
 | POST | `/api/calificaciones` | APP_MOVIL | RF-WTX-006, RF-TAX-017 |
 | GET | `/api/calificaciones/taxista/{id}/valoracion` | SUPERADMIN, APP_MOVIL, el propio taxista | RN-013 |
+| PUT | `/api/taxistas/{id}/ubicacion` | APP_MOVIL, el propio taxista (solo EN_SERVICIO) | Ubicación durante servicio activo |
+| GET | `/api/taxistas/{id}/ubicacion` | SUPERADMIN, APP_MOVIL, el propio taxista | Mapa del taxista para el cliente |
+| POST | `/api/servicios` | SUPERADMIN, APP_MOVIL | Crea el pedido de taxi (SOLICITADO) y su QR |
+| GET | `/api/servicios/solicitados` | SUPERADMIN, APP_MOVIL, TAXISTA | Pedidos que se pueden aceptar |
+| GET | `/api/servicios/{id}` | SUPERADMIN, APP_MOVIL, el taxista asignado | Estado del servicio |
+| POST | `/api/servicios/{id}/aceptar` | TAXISTA | SOLICITADO → ASIGNADO |
+| PATCH | `/api/servicios/{id}/estado` | TAXISTA asignado | ASIGNADO → EN_CAMINO → EN_TRASLADO |
+| POST | `/api/servicios/{id}/finalizar` | TAXISTA asignado | EN_TRASLADO → FINALIZADO validando el QR |
+| GET | `/api/eventos` | SUPERADMIN | Log de eventos relevantes |
 
 Cuando un servicio de atrás no responde, el gateway devuelve **503** con este cuerpo, que es
 exactamente lo que la app móvil necesita para mostrar el aviso sin romper las reservas

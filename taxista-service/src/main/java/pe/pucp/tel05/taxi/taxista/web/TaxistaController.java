@@ -13,11 +13,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import pe.pucp.tel05.taxi.taxista.domain.Taxista;
+import pe.pucp.tel05.taxi.taxista.service.EventoService;
 import pe.pucp.tel05.taxi.taxista.service.TaxistaService;
 import pe.pucp.tel05.taxi.taxista.web.dto.ActualizarPerfilRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.ActualizarValoracionRequest;
@@ -25,6 +27,8 @@ import pe.pucp.tel05.taxi.taxista.web.dto.CambioDisponibilidadRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.DecisionAprobacionRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.RegistroTaxistaRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.TaxistaResponse;
+import pe.pucp.tel05.taxi.taxista.web.dto.UbicacionRequest;
+import pe.pucp.tel05.taxi.taxista.web.dto.UbicacionResponse;
 
 /**
  * API REST del dominio taxista (MOD-WTX + MOD-API).
@@ -38,15 +42,18 @@ import pe.pucp.tel05.taxi.taxista.web.dto.TaxistaResponse;
 public class TaxistaController {
 
     private final TaxistaService servicio;
+    private final EventoService eventos;
 
-    public TaxistaController(TaxistaService servicio) {
+    public TaxistaController(TaxistaService servicio, EventoService eventos) {
         this.servicio = servicio;
+        this.eventos = eventos;
     }
 
     /** RF-WTX-001 y RF-WTX-002. Publico: es el autoregistro. */
     @PostMapping("/registro")
     public ResponseEntity<TaxistaResponse> registrar(@Valid @RequestBody RegistroTaxistaRequest req) {
         Taxista creado = servicio.registrar(req);
+        eventos.registrar("TAXISTA_REGISTRADO", creado.getCorreo(), creado.getId(), "Autoregistro, placa " + creado.getPlaca());
         return ResponseEntity
                 .created(URI.create("/api/taxistas/" + creado.getId()))
                 .body(TaxistaResponse.desde(creado));
@@ -90,6 +97,8 @@ public class TaxistaController {
                                    @AuthenticationPrincipal Jwt jwt) {
         Taxista actualizado = servicio.decidirSolicitud(
                 id, req.aprobado(), req.motivo(), jwt.getSubject());
+        eventos.registrar(req.aprobado() ? "TAXISTA_APROBADO" : "TAXISTA_RECHAZADO",
+                jwt.getSubject(), id, req.motivo());
         return TaxistaResponse.desde(actualizado);
     }
 
@@ -100,8 +109,11 @@ public class TaxistaController {
     @PatchMapping("/{id}/disponibilidad")
     @PreAuthorize("hasAnyRole('SUPERADMIN','APP_MOVIL') or #id == authentication.name")
     public TaxistaResponse cambiarDisponibilidad(@PathVariable String id,
-                                                 @Valid @RequestBody CambioDisponibilidadRequest req) {
-        return TaxistaResponse.desde(servicio.cambiarDisponibilidad(id, req.estado()));
+                                                 @Valid @RequestBody CambioDisponibilidadRequest req,
+                                                 @AuthenticationPrincipal Jwt jwt) {
+        Taxista t = servicio.cambiarDisponibilidad(id, req.estado());
+        eventos.registrar("DISPONIBILIDAD_CAMBIADA", jwt.getSubject(), id, "Nuevo estado " + req.estado());
+        return TaxistaResponse.desde(t);
     }
 
     /**
@@ -114,6 +126,24 @@ public class TaxistaController {
     public TaxistaResponse actualizarPerfil(@PathVariable String id,
                                             @Valid @RequestBody ActualizarPerfilRequest req) {
         return TaxistaResponse.desde(servicio.actualizarPerfil(id, req));
+    }
+
+    /**
+     * El taxista reporta su posicion durante un servicio activo. No se
+     * registra como evento: es periodica y llenaria el log.
+     */
+    @PutMapping("/{id}/ubicacion")
+    @PreAuthorize("hasRole('APP_MOVIL') or #id == authentication.name")
+    public UbicacionResponse actualizarUbicacion(@PathVariable String id,
+                                                 @Valid @RequestBody UbicacionRequest req) {
+        return UbicacionResponse.desde(servicio.actualizarUbicacion(id, req.latitud(), req.longitud()));
+    }
+
+    /** La app movil muestra al cliente donde esta el taxista en un mapa. */
+    @GetMapping("/{id}/ubicacion")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','APP_MOVIL') or #id == authentication.name")
+    public UbicacionResponse obtenerUbicacion(@PathVariable String id) {
+        return UbicacionResponse.desde(servicio.obtener(id));
     }
 
     /**
