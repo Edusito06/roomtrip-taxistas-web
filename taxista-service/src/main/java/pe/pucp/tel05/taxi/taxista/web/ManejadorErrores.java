@@ -47,6 +47,13 @@ public class ManejadorErrores {
                 .body(base(HttpStatus.NOT_FOUND, "NO_ENCONTRADO", ex.getMessage()));
     }
 
+    @ExceptionHandler(AuthService.DemasiadosIntentosException.class)
+    public ResponseEntity<Map<String, Object>> demasiadosIntentos(AuthService.DemasiadosIntentosException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getSegundos()))
+                .body(base(HttpStatus.TOO_MANY_REQUESTS, "DEMASIADOS_INTENTOS", ex.getMessage()));
+    }
+
     @ExceptionHandler(AuthService.CredencialesInvalidasException.class)
     public ResponseEntity<Map<String, Object>> credenciales(AuthService.CredencialesInvalidasException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

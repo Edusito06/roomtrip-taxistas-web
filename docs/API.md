@@ -36,7 +36,9 @@ Respuesta `200`:
 - `rol` es `SUPERADMIN`, `APP_MOVIL` o `TAXISTA`. `subject` es el id del usuario; para un taxista es
   el mismo `id` que se usa en `/api/taxistas/{id}`.
 - El token dura 2 horas por defecto. Al recibir `401` hay que volver a iniciar sesión.
-- Credencial incorrecta o taxista rechazado: `401` con mensaje. El mensaje no distingue entre "correo
+- Credencial incorrecta o taxista rechazado: `401` con mensaje.
+- **Límite de intentos:** tras 5 fallos seguidos para un mismo correo, el login responde `429` durante 15 minutos (ver
+  la tabla de errores). Un login correcto reinicia el contador. La app debe mostrar el `mensaje` y no reintentar en bucle. El mensaje no distingue entre "correo
   inexistente" y "contraseña errónea" a propósito.
 
 ### Qué rol usar para cada cosa
@@ -74,6 +76,7 @@ Todos los errores de negocio tienen el mismo cuerpo:
 | 403 | — | Token válido pero el rol (o el taxista) no puede hacer eso |
 | 404 | `NO_ENCONTRADO` | No existe el recurso |
 | 409 | `REGLA_NEGOCIO` | La operación viola una regla (estado inválido, ya calificado, etc.). El `mensaje` es apto para mostrar al usuario |
+| 429 | `DEMASIADOS_INTENTOS` | Demasiados logins fallidos para ese correo: queda bloqueado (5 fallos seguidos, 15 minutos). Trae la cabecera `Retry-After` con los segundos que faltan. Ni la contraseña correcta entra mientras dure el bloqueo |
 | 503 | `SERVICIO_NO_DISPONIBLE` | El gateway no logra hablar con el servicio (RF-TAX-018) |
 
 ### Cuando la API de taxistas no está disponible (RF-TAX-018, RNF-FIA-001)

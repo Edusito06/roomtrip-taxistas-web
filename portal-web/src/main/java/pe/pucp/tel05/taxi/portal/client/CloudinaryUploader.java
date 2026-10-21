@@ -32,6 +32,7 @@ public class CloudinaryUploader {
         if (archivo == null || archivo.isEmpty()) {
             throw new SubidaException("Debes adjuntar una imagen");
         }
+        validarImagen(archivo);
         if (cloudinary == null) {
             throw new SubidaException(
                     "El portal no tiene configurado Cloudinary (variable CLOUDINARY_URL). "
@@ -53,6 +54,32 @@ public class CloudinaryUploader {
             // falla (credenciales invalidas, cuenta mal configurada, error de la API):
             // todas se traducen aqui para no dejar pasar un 500 crudo hasta el formulario.
             throw new SubidaException("No se pudo subir la imagen a Cloudinary: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Solo JPG, PNG o WebP, comprobado por los primeros bytes del archivo y no por el
+     * Content-Type ni la extension, que el navegador (o un atacante) puede poner a gusto.
+     * SVG y HTML quedan fuera a proposito: pueden llevar scripts.
+     */
+    static void validarImagen(MultipartFile archivo) {
+        byte[] cabecera = new byte[12];
+        int leidos;
+        try (java.io.InputStream in = archivo.getInputStream()) {
+            leidos = in.readNBytes(cabecera, 0, cabecera.length);
+        } catch (IOException e) {
+            throw new SubidaException("No se pudo leer el archivo para validarlo.");
+        }
+        boolean jpeg = leidos >= 3 && (cabecera[0] & 0xFF) == 0xFF && (cabecera[1] & 0xFF) == 0xD8
+                && (cabecera[2] & 0xFF) == 0xFF;
+        boolean png = leidos >= 8 && (cabecera[0] & 0xFF) == 0x89 && cabecera[1] == 'P'
+                && cabecera[2] == 'N' && cabecera[3] == 'G' && cabecera[4] == 0x0D
+                && cabecera[5] == 0x0A && cabecera[6] == 0x1A && cabecera[7] == 0x0A;
+        boolean webp = leidos >= 12 && cabecera[0] == 'R' && cabecera[1] == 'I' && cabecera[2] == 'F'
+                && cabecera[3] == 'F' && cabecera[8] == 'W' && cabecera[9] == 'E' && cabecera[10] == 'B'
+                && cabecera[11] == 'P';
+        if (!(jpeg || png || webp)) {
+            throw new SubidaException("La foto debe ser una imagen JPG, PNG o WebP.");
         }
     }
 

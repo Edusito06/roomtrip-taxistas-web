@@ -15,6 +15,10 @@ spring:
       max-request-size: 10MB
 
 app:
+  login:
+    # Intentos fallidos seguidos por correo antes de bloquearlo, y minutos que dura el bloqueo
+    max-intentos: ${LOGIN_MAX_INTENTOS:5}
+    bloqueo-minutos: ${LOGIN_BLOQUEO_MINUTOS:15}
   jwt:
     secret: ${JWT_SECRET:cambiame-por-un-secreto-largo-de-al-menos-32-caracteres}
     expiracion-minutos: ${JWT_EXPIRACION_MINUTOS:120}

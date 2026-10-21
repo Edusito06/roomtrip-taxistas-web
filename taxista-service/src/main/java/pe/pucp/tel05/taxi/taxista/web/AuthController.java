@@ -32,6 +32,12 @@ public class AuthController {
             TokenResponse token = authService.login(req.correo(), req.password());
             eventos.registrar("LOGIN_OK", req.correo(), token.subject(), "Rol " + token.rol());
             return ResponseEntity.ok(token);
+        } catch (AuthService.DemasiadosIntentosException e) {
+            // Solo el intento que dispara el bloqueo queda en el log; los siguientes no lo llenan.
+            if (e.esNuevo()) {
+                eventos.registrar("LOGIN_BLOQUEADO", req.correo(), null, "Demasiados intentos fallidos");
+            }
+            throw e;
         } catch (AuthService.CredencialesInvalidasException e) {
             eventos.registrar("LOGIN_FALLIDO", req.correo(), null, e.getMessage());
             throw e;
