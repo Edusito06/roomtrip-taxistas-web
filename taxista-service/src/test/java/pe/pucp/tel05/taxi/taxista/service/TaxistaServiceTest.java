@@ -13,10 +13,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import pe.pucp.tel05.taxi.taxista.domain.EstadoDisponibilidad;
 import pe.pucp.tel05.taxi.taxista.domain.EstadoHabilitacion;
 import pe.pucp.tel05.taxi.taxista.domain.Taxista;
+import pe.pucp.tel05.taxi.taxista.repository.ServicioTaxiRepository;
 import pe.pucp.tel05.taxi.taxista.repository.TaxistaRepository;
 import pe.pucp.tel05.taxi.taxista.web.dto.ActualizarPerfilRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.RegistroTaxistaRequest;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,6 +36,7 @@ import static org.mockito.Mockito.when;
 class TaxistaServiceTest {
 
     private TaxistaRepository repositorio;
+    private ServicioTaxiRepository servicios;
     private PasswordEncoder passwordEncoder;
     private TaxistaService servicio;
 
@@ -41,7 +44,8 @@ class TaxistaServiceTest {
     void setUp() {
         repositorio = mock(TaxistaRepository.class);
         passwordEncoder = new BCryptPasswordEncoder();
-        servicio = new TaxistaService(repositorio, passwordEncoder);
+        servicios = mock(ServicioTaxiRepository.class);
+        servicio = new TaxistaService(repositorio, passwordEncoder, servicios);
 
         when(repositorio.existsByCorreo(anyString())).thenReturn(false);
         when(repositorio.existsByNumeroDocumento(anyString())).thenReturn(false);
@@ -98,6 +102,73 @@ class TaxistaServiceTest {
 
         assertThrows(TaxistaService.ReglaNegocioException.class,
                 () -> servicio.decidirSolicitud("t2", true, null, "admin"));
+    }
+
+    private Taxista taxistaEn(String id, EstadoHabilitacion habilitacion, EstadoDisponibilidad disponibilidad) {
+        Taxista t = new Taxista();
+        t.setId(id);
+        t.setEstadoHabilitacion(habilitacion);
+        t.setEstadoDisponibilidad(disponibilidad);
+        when(repositorio.findById(id)).thenReturn(Optional.of(t));
+        return t;
+    }
+
+    @Test
+    @DisplayName("Desactivar a un aprobado lo deja INHABILITADO y NO_DISPONIBLE, con su motivo")
+    void inhabilitarAprobado() {
+        Taxista t = taxistaEn("t10", EstadoHabilitacion.APROBADO, EstadoDisponibilidad.DISPONIBLE);
+
+        Taxista r = servicio.inhabilitar("t10", "  Quejas de clientes ");
+
+        assertEquals(EstadoHabilitacion.INHABILITADO, r.getEstadoHabilitacion());
+        assertEquals(EstadoDisponibilidad.NO_DISPONIBLE, r.getEstadoDisponibilidad());
+        assertEquals("Quejas de clientes", t.getMotivoInhabilitacion());
+    }
+
+    @Test
+    @DisplayName("No se desactiva a un taxista con un traslado en curso")
+    void noSeInhabilitaConTrasladoEnCurso() {
+        Taxista t = taxistaEn("t11", EstadoHabilitacion.APROBADO, EstadoDisponibilidad.EN_SERVICIO);
+        when(servicios.existsByTaxistaIdAndEstadoIn(anyString(), any())).thenReturn(true);
+
+        assertThrows(TaxistaService.ReglaNegocioException.class, () -> servicio.inhabilitar("t11", "motivo"));
+        assertEquals(EstadoHabilitacion.APROBADO, t.getEstadoHabilitacion());
+    }
+
+    @Test
+    @DisplayName("Solo se desactiva a un aprobado y siempre con motivo")
+    void inhabilitarExigeAprobadoYMotivo() {
+        taxistaEn("t12", EstadoHabilitacion.PENDIENTE, EstadoDisponibilidad.NO_DISPONIBLE);
+        taxistaEn("t13", EstadoHabilitacion.APROBADO, EstadoDisponibilidad.DISPONIBLE);
+
+        assertThrows(TaxistaService.ReglaNegocioException.class, () -> servicio.inhabilitar("t12", "motivo"));
+        assertThrows(TaxistaService.ReglaNegocioException.class, () -> servicio.inhabilitar("t13", "  "));
+        assertThrows(TaxistaService.ReglaNegocioException.class, () -> servicio.inhabilitar("t13", null));
+    }
+
+    @Test
+    @DisplayName("Reactivar devuelve a APROBADO sin disponibilidad, y solo aplica a un INHABILITADO")
+    void reactivar() {
+        Taxista t = taxistaEn("t14", EstadoHabilitacion.INHABILITADO, EstadoDisponibilidad.NO_DISPONIBLE);
+        t.setMotivoInhabilitacion("Quejas");
+        taxistaEn("t15", EstadoHabilitacion.APROBADO, EstadoDisponibilidad.DISPONIBLE);
+
+        Taxista r = servicio.reactivar("t14");
+
+        assertEquals(EstadoHabilitacion.APROBADO, r.getEstadoHabilitacion());
+        assertEquals(EstadoDisponibilidad.NO_DISPONIBLE, r.getEstadoDisponibilidad());
+        assertEquals(null, r.getMotivoInhabilitacion());
+        assertThrows(TaxistaService.ReglaNegocioException.class, () -> servicio.reactivar("t15"));
+    }
+
+    @Test
+    @DisplayName("Un taxista INHABILITADO no puede declararse DISPONIBLE, pero si NO_DISPONIBLE")
+    void inhabilitadoNoPuedeEstarDisponible() {
+        taxistaEn("t16", EstadoHabilitacion.INHABILITADO, EstadoDisponibilidad.NO_DISPONIBLE);
+
+        assertThrows(TaxistaService.ReglaNegocioException.class,
+                () -> servicio.cambiarDisponibilidad("t16", EstadoDisponibilidad.DISPONIBLE));
+        assertDoesNotThrow(() -> servicio.cambiarDisponibilidad("t16", EstadoDisponibilidad.NO_DISPONIBLE));
     }
 
     @Test

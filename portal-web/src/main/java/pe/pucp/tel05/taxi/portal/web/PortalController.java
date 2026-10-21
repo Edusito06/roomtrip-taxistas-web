@@ -157,6 +157,26 @@ public class PortalController {
         return "redirect:/admin/solicitudes";
     }
 
+    /** Desactivar o reactivar a un taxista ya aprobado (el API rechaza si tiene un traslado en curso). */
+    @PostMapping("/admin/taxistas/{id}/habilitacion")
+    public String cambiarHabilitacion(@PathVariable String id,
+                                      @RequestParam boolean activo,
+                                      @RequestParam(required = false) String motivo,
+                                      HttpSession sesion,
+                                      RedirectAttributes redirect) {
+        String token = token(sesion);
+        if (token == null) {
+            return "redirect:/login";
+        }
+        try {
+            api.cambiarHabilitacion(token, id, activo, motivo);
+            redirect.addFlashAttribute("exito", activo ? "Taxista reactivado." : "Taxista desactivado.");
+        } catch (TaxiApiClient.ApiException e) {
+            redirect.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/admin/taxistas";
+    }
+
     @GetMapping("/admin/taxistas")
     public String taxistas(HttpSession sesion, Model modelo, RedirectAttributes redirect) {
         String token = token(sesion);

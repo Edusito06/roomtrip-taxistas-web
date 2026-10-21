@@ -110,6 +110,8 @@ Todo pasa por el gateway. El flujo de la app móvil es:
 | PATCH | `/api/taxistas/{id}/disponibilidad` | SUPERADMIN, APP_MOVIL, el propio taxista | RF-WTX-007 |
 | POST | `/api/calificaciones` | APP_MOVIL | RF-WTX-006, RF-TAX-017 |
 | GET | `/api/calificaciones/taxista/{id}/valoracion` | SUPERADMIN, APP_MOVIL, el propio taxista | RN-013 |
+| PATCH | `/api/taxistas/{id}/habilitacion` | SUPERADMIN | Desactiva o reactiva a un taxista aprobado |
+| GET | `/api/servicios/mios` | TAXISTA | Servicios propios del taxista |
 | PUT | `/api/taxistas/{id}/ubicacion` | APP_MOVIL, el propio taxista (solo EN_SERVICIO) | Ubicación durante servicio activo |
 | GET | `/api/taxistas/{id}/ubicacion` | SUPERADMIN, APP_MOVIL, el propio taxista | Mapa del taxista para el cliente |
 | POST | `/api/servicios` | SUPERADMIN, APP_MOVIL | Crea el pedido de taxi (SOLICITADO) y su QR |

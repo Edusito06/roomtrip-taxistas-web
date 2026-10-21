@@ -1,6 +1,7 @@
 package pe.pucp.tel05.taxi.taxista.service;
 
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,7 +12,9 @@ import org.springframework.stereotype.Service;
 
 import pe.pucp.tel05.taxi.taxista.domain.EstadoDisponibilidad;
 import pe.pucp.tel05.taxi.taxista.domain.EstadoHabilitacion;
+import pe.pucp.tel05.taxi.taxista.domain.EstadoServicio;
 import pe.pucp.tel05.taxi.taxista.domain.Taxista;
+import pe.pucp.tel05.taxi.taxista.repository.ServicioTaxiRepository;
 import pe.pucp.tel05.taxi.taxista.repository.TaxistaRepository;
 import pe.pucp.tel05.taxi.taxista.web.dto.ActualizarPerfilRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.RegistroTaxistaRequest;
@@ -27,12 +30,19 @@ public class TaxistaService {
 
     private static final Logger log = LoggerFactory.getLogger(TaxistaService.class);
 
+    /** Estados en los que un taxista tiene un traslado en curso y no se le puede desactivar. */
+    private static final EnumSet<EstadoServicio> SERVICIO_EN_CURSO =
+            EnumSet.of(EstadoServicio.ASIGNADO, EstadoServicio.EN_CAMINO, EstadoServicio.EN_TRASLADO);
+
     private final TaxistaRepository repositorio;
     private final PasswordEncoder passwordEncoder;
+    private final ServicioTaxiRepository servicios;
 
-    public TaxistaService(TaxistaRepository repositorio, PasswordEncoder passwordEncoder) {
+    public TaxistaService(TaxistaRepository repositorio, PasswordEncoder passwordEncoder,
+                          ServicioTaxiRepository servicios) {
         this.repositorio = repositorio;
         this.passwordEncoder = passwordEncoder;
+        this.servicios = servicios;
     }
 
     /**
@@ -120,6 +130,47 @@ public class TaxistaService {
         t.setFechaActualizacion(Instant.now());
 
         log.info("Solicitud id={} {} por {}", id, aprobado ? "APROBADA" : "RECHAZADA", decididoPor);
+        return repositorio.save(t);
+    }
+
+    /**
+     * El Superadmin desactiva a un taxista aprobado. Reglas: solo se desactiva a un APROBADO,
+     * pide un motivo y no se puede mientras tenga un traslado en curso (se espera a que termine,
+     * para no dejar a un cliente sin taxista). Queda NO_DISPONIBLE y fuera de /disponibles.
+     */
+    public Taxista inhabilitar(String id, String motivo) {
+        Taxista t = obtener(id);
+        if (t.getEstadoHabilitacion() != EstadoHabilitacion.APROBADO) {
+            throw new ReglaNegocioException(
+                    "Solo se puede desactivar a un taxista aprobado (estado actual: " + t.getEstadoHabilitacion() + ")");
+        }
+        if (motivo == null || motivo.isBlank()) {
+            throw new ReglaNegocioException("Indica el motivo de la desactivacion");
+        }
+        if (servicios.existsByTaxistaIdAndEstadoIn(id, SERVICIO_EN_CURSO)) {
+            throw new ReglaNegocioException(
+                    "El taxista tiene un traslado en curso. Espera a que termine para desactivarlo");
+        }
+        t.setEstadoHabilitacion(EstadoHabilitacion.INHABILITADO);
+        t.setEstadoDisponibilidad(EstadoDisponibilidad.NO_DISPONIBLE);
+        t.setMotivoInhabilitacion(motivo.trim());
+        t.setFechaActualizacion(Instant.now());
+        log.info("Taxista id={} desactivado", id);
+        return repositorio.save(t);
+    }
+
+    /** Reactiva a un taxista INHABILITADO: vuelve a APROBADO, NO_DISPONIBLE hasta que active su jornada. */
+    public Taxista reactivar(String id) {
+        Taxista t = obtener(id);
+        if (t.getEstadoHabilitacion() != EstadoHabilitacion.INHABILITADO) {
+            throw new ReglaNegocioException(
+                    "Solo se puede reactivar a un taxista desactivado (estado actual: " + t.getEstadoHabilitacion() + ")");
+        }
+        t.setEstadoHabilitacion(EstadoHabilitacion.APROBADO);
+        t.setEstadoDisponibilidad(EstadoDisponibilidad.NO_DISPONIBLE);
+        t.setMotivoInhabilitacion(null);
+        t.setFechaActualizacion(Instant.now());
+        log.info("Taxista id={} reactivado", id);
         return repositorio.save(t);
     }
 

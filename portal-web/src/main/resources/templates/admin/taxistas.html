@@ -78,6 +78,7 @@
           <th>Habilitación</th>
           <th>Disponibilidad</th>
           <th class="text-end">Valoración</th>
+          <th class="text-end">Acción</th>
         </tr>
         </thead>
         <tbody>
@@ -111,6 +112,22 @@
             <span class="text-muted small"
                   th:text="'(' + ${t.totalCalificaciones} + ')'">(0)</span>
           </td>
+          <td class="text-end text-nowrap">
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                    th:if="${t.estadoHabilitacion == 'APROBADO'}"
+                    data-bs-toggle="modal" data-bs-target="#modalDesactivar"
+                    th:data-id="${t.id}" th:data-nombre="${t.nombres} + ' ' + ${t.apellidos}">
+              <i class="bi bi-slash-circle me-1"></i>Desactivar
+            </button>
+            <form th:if="${t.estadoHabilitacion == 'INHABILITADO'}" class="d-inline" method="post"
+                  th:action="@{'/admin/taxistas/' + ${t.id} + '/habilitacion'}"
+                  onsubmit="return confirm('¿Reactivar a este taxista?');">
+              <input type="hidden" name="activo" value="true">
+              <button class="btn btn-sm btn-outline-primary" type="submit">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar
+              </button>
+            </form>
+          </td>
         </tr>
         </tbody>
       </table>
@@ -120,7 +137,43 @@
 
 </div>
 
+<div class="modal fade" id="modalDesactivar" tabindex="-1" aria-labelledby="desactivarTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" method="post" id="formDesactivar" style="border-radius: var(--radius-lg);">
+      <input type="hidden" name="activo" value="false">
+      <div class="modal-header border-0">
+        <h2 class="h6 fw-bold mb-0" id="desactivarTitulo">Desactivar taxista</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body pt-0">
+        <p class="small text-muted mb-3">
+          <strong id="desactivarNombre"></strong> dejará de recibir pedidos y de aparecer como disponible.
+          Podrá seguir entrando a su cuenta y tú puedes reactivarlo cuando quieras.
+          Si tiene un traslado en curso, espera a que termine.
+        </p>
+        <label class="form-label" for="desactivarMotivo">Motivo</label>
+        <textarea class="form-control" id="desactivarMotivo" name="motivo" rows="3" required
+                  placeholder="Ej.: quejas de clientes, documentos vencidos"></textarea>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" style="background: var(--danger); border-color: var(--danger);">
+          Desactivar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div th:replace="~{layout :: scripts}"></div>
+<script>
+  document.getElementById('modalDesactivar').addEventListener('show.bs.modal', function (ev) {
+    var b = ev.relatedTarget;
+    document.getElementById('desactivarNombre').textContent = b.dataset.nombre;
+    document.getElementById('formDesactivar').action = '/admin/taxistas/' + encodeURIComponent(b.dataset.id) + '/habilitacion';
+    document.getElementById('desactivarMotivo').value = '';
+  });
+</script>
 <script th:src="@{/js/app.js}"></script>
 </body>
 </html>

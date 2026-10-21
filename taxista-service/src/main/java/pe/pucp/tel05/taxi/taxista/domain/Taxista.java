@@ -50,6 +50,7 @@ public class Taxista {
     private EstadoHabilitacion estadoHabilitacion = EstadoHabilitacion.PENDIENTE;
     private EstadoDisponibilidad estadoDisponibilidad = EstadoDisponibilidad.NO_DISPONIBLE;
     private String motivoRechazo;
+    private String motivoInhabilitacion;
     private double valoracionPromedio;
     private long totalCalificaciones;
 
@@ -261,6 +262,14 @@ public class Taxista {
 
     public void setDecididoPor(String decididoPor) {
         this.decididoPor = decididoPor;
+    }
+
+    public String getMotivoInhabilitacion() {
+        return motivoInhabilitacion;
+    }
+
+    public void setMotivoInhabilitacion(String motivoInhabilitacion) {
+        this.motivoInhabilitacion = motivoInhabilitacion;
     }
 
     public Double getUbicacionLatitud() {

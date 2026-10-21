@@ -1,5 +1,6 @@
 package pe.pucp.tel05.taxi.taxista.repository;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -14,6 +15,8 @@ public interface ServicioTaxiRepository extends MongoRepository<ServicioTaxi, St
     List<ServicioTaxi> findByEstadoOrderByFechaSolicitudAsc(EstadoServicio estado);
 
     List<ServicioTaxi> findTop100ByOrderByFechaSolicitudDesc();
+
+    boolean existsByTaxistaIdAndEstadoIn(String taxistaId, Collection<EstadoServicio> estados);
 
     List<ServicioTaxi> findByTaxistaIdOrderByFechaSolicitudDesc(String taxistaId);
 }

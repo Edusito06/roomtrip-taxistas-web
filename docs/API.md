@@ -120,12 +120,15 @@ Objeto `Taxista` que devuelven estos endpoints (nunca incluye la contraseña):
 }
 ```
 
-- `estadoHabilitacion`: `PENDIENTE`, `APROBADO` o `RECHAZADO`. Solo un `APROBADO` presta servicios.
+- `estadoHabilitacion`: `PENDIENTE`, `APROBADO`, `RECHAZADO` o `INHABILITADO` (desactivado por el Superadmin tras haber sido
+  aprobado). Solo un `APROBADO` presta servicios, recibe pedidos y aparece en `/disponibles`. Un `INHABILITADO` puede seguir
+  entrando y viendo su perfil; el Superadmin puede reactivarlo.
 - `estadoDisponibilidad`: `DISPONIBLE`, `EN_SERVICIO` o `NO_DISPONIBLE`.
 
 | Método y ruta | Rol | Para qué |
 |---|---|---|
 | `POST /api/taxistas/registro` | público | Autoregistro (RF-WTX-001/002). Lo usa el portal web. Queda `PENDIENTE` |
+| `PATCH /api/taxistas/{id}/habilitacion` | `SUPERADMIN` | Desactiva o reactiva a un taxista aprobado. Cuerpo `{ "activo": false, "motivo": "..." }` (el motivo es obligatorio al desactivar) o `{ "activo": true }`. Si tiene un traslado en curso: 409 |
 | `GET /api/taxistas/disponibles` | `APP_MOVIL`, `SUPERADMIN` | Taxistas `APROBADO` y `DISPONIBLE` (RF-API-001) |
 | `GET /api/taxistas/{id}` | `APP_MOVIL`, `SUPERADMIN`, el propio taxista | Datos del taxista asignado: foto, vehículo, valoración |
 | `PATCH /api/taxistas/{id}/disponibilidad` | `APP_MOVIL`, `SUPERADMIN`, el propio taxista | Cuerpo `{ "estado": "DISPONIBLE" }`. Un taxista no aprobado no puede ponerse disponible (409) |
@@ -176,6 +179,7 @@ muestra al llegar, y el taxista lo lee con la cámara.
 | Método y ruta | Rol | Qué hace |
 |---|---|---|
 | `POST /api/servicios` | `APP_MOVIL`, `SUPERADMIN` | Crea el pedido (`SOLICITADO`). Cuerpo: `{ "hotelId", "hotelNombre", "clienteId", "aeropuertoDestino" }`. Devuelve `201` con el `qrCodigo`; el hotel se lo envía al cliente |
+| `GET /api/servicios/mios` | `TAXISTA` | Servicios del taxista autenticado (el activo y el historial), del más reciente al más antiguo. Sin `qrCodigo` |
 | `GET /api/servicios/solicitados` | `APP_MOVIL`, `SUPERADMIN`, `TAXISTA` | Pedidos que se pueden aceptar |
 | `GET /api/servicios/{id}` | `APP_MOVIL`, `SUPERADMIN`, el taxista asignado | Estado actual (el hotel y el cliente lo consultan para ver el avance) |
 | `POST /api/servicios/{id}/aceptar` | `TAXISTA` | `SOLICITADO` → `ASIGNADO`. El taxista debe estar aprobado y `DISPONIBLE`; pasa a `EN_SERVICIO`. Si otro lo tomó antes: 409 |

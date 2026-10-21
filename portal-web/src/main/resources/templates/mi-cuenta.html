@@ -45,6 +45,11 @@
       <span>Tu solicitud fue rechazada. Comunícate con el administrador para más detalles.</span>
     </div>
 
+    <div th:if="${taxista.estadoHabilitacion == 'INHABILITADO'}" class="app-alert app-alert-danger">
+      <i class="bi bi-slash-circle-fill"></i>
+      <span>Tu cuenta está desactivada y no recibes pedidos. Comunícate con el administrador para reactivarla.</span>
+    </div>
+
     <div th:if="${taxista.estadoHabilitacion == 'APROBADO'}">
       <span class="section-eyebrow"><i class="bi bi-broadcast"></i> Disponibilidad</span>
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mt-2">

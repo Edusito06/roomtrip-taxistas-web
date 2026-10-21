@@ -62,6 +62,14 @@ public class ServicioTaxiController {
         return servicio.recientes().stream().map(s -> ServicioResponse.desde(s, true)).toList();
     }
 
+    /** El taxista ve sus propios servicios (el activo y el historial), del mas reciente al mas antiguo. */
+    @GetMapping("/mios")
+    @PreAuthorize("hasRole('TAXISTA')")
+    public List<ServicioResponse> mios(@AuthenticationPrincipal Jwt jwt) {
+        return servicio.deTaxista(jwt.getSubject()).stream()
+                .map(s -> ServicioResponse.desde(s, false)).toList();
+    }
+
     /** Pedidos que un taxista puede aceptar. */
     @GetMapping("/solicitados")
     @PreAuthorize("hasAnyRole('SUPERADMIN','APP_MOVIL','TAXISTA')")

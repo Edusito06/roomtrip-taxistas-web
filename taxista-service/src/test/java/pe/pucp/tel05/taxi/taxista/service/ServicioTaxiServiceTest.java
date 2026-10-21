@@ -108,6 +108,15 @@ class ServicioTaxiServiceTest {
     }
 
     @Test
+    @DisplayName("Un taxista INHABILITADO no puede aceptar pedidos")
+    void inhabilitadoNoAcepta() {
+        pedido(EstadoServicio.SOLICITADO);
+        taxista.setEstadoHabilitacion(EstadoHabilitacion.INHABILITADO);
+
+        assertThrows(ReglaNegocioException.class, () -> servicio.aceptar("s1", "t1"));
+    }
+
+    @Test
     @DisplayName("El flujo es lineal: ASIGNADO -> EN_CAMINO -> EN_TRASLADO, sin saltos")
     void flujoLineal() {
         pedido(EstadoServicio.ASIGNADO);
@@ -157,7 +166,7 @@ class ServicioTaxiServiceTest {
         TaxistaRepository repo = mock(TaxistaRepository.class);
         when(repo.findById("t1")).thenReturn(Optional.of(taxista));
         when(repo.save(any(Taxista.class))).thenAnswer(inv -> inv.getArgument(0));
-        TaxistaService ts = new TaxistaService(repo, null);
+        TaxistaService ts = new TaxistaService(repo, null, servicios);
 
         assertThrows(ReglaNegocioException.class, () -> ts.actualizarUbicacion("t1", -12.0, -77.0));
 

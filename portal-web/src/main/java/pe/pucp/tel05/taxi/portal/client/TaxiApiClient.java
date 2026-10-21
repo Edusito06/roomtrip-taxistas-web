@@ -61,6 +61,18 @@ public class TaxiApiClient {
                 .body(new org.springframework.core.ParameterizedTypeReference<List<Map<String, Object>>>() { }));
     }
 
+    /** Desactiva (activo=false, con motivo) o reactiva a un taxista ya aprobado. */
+    public void cambiarHabilitacion(String token, String id, boolean activo, String motivo) {
+        ejecutar(() -> restClient.patch()
+                .uri("/api/taxistas/{id}/habilitacion", id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(motivo == null || activo
+                        ? Map.of("activo", activo)
+                        : Map.of("activo", activo, "motivo", motivo))
+                .retrieve()
+                .body(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() { }));
+    }
+
     /** Servicios de taxi recientes (Superadmin). */
     public List<Map<String, Object>> listarServicios(String token) {
         return ejecutar(() -> restClient.get()

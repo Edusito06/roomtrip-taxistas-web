@@ -10,5 +10,11 @@ public enum EstadoHabilitacion {
     /** Aprobado por el Superadmin. Habilitado para prestar servicios. */
     APROBADO,
     /** Rechazado por el Superadmin. Permanece inhabilitado. */
-    RECHAZADO
+    RECHAZADO,
+    /**
+     * Desactivado por el Superadmin despues de haber sido aprobado (el plan de proyecto le
+     * permite activar y desactivar taxistas). No presta servicios ni aparece como disponible,
+     * pero conserva su sesion y su perfil. El Superadmin puede reactivarlo.
+     */
+    INHABILITADO
 }

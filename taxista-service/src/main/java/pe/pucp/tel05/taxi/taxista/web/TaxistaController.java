@@ -24,6 +24,7 @@ import pe.pucp.tel05.taxi.taxista.service.TaxistaService;
 import pe.pucp.tel05.taxi.taxista.web.dto.ActualizarPerfilRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.ActualizarValoracionRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.CambioDisponibilidadRequest;
+import pe.pucp.tel05.taxi.taxista.web.dto.CambioHabilitacionRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.DecisionAprobacionRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.RegistroTaxistaRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.TaxistaResponse;
@@ -100,6 +101,18 @@ public class TaxistaController {
         eventos.registrar(req.aprobado() ? "TAXISTA_APROBADO" : "TAXISTA_RECHAZADO",
                 jwt.getSubject(), id, req.motivo());
         return TaxistaResponse.desde(actualizado);
+    }
+
+    /** Activar o desactivar a un taxista ya aprobado. Solo el Superadmin. */
+    @PatchMapping("/{id}/habilitacion")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public TaxistaResponse cambiarHabilitacion(@PathVariable String id,
+                                               @Valid @RequestBody CambioHabilitacionRequest req,
+                                               @AuthenticationPrincipal Jwt jwt) {
+        Taxista t = req.activo() ? servicio.reactivar(id) : servicio.inhabilitar(id, req.motivo());
+        eventos.registrar(req.activo() ? "TAXISTA_REACTIVADO" : "TAXISTA_INHABILITADO",
+                jwt.getSubject(), id, req.activo() ? "Reactivado por el Superadmin" : req.motivo());
+        return TaxistaResponse.desde(t);
     }
 
     /**
