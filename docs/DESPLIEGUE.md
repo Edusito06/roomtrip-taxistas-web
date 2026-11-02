@@ -232,6 +232,7 @@ nunca en el repositorio ni como `--set-env-vars`. Cloud Run inyecta `PORT` solo.
 | `CLOUDINARY_URL` *(secreto)* | portal | vacío | Subida de fotos; sin ella el registro falla con un mensaje claro |
 | `SESSION_TIMEOUT` | portal | `30m` | Inactividad máxima de la sesión |
 | `THYMELEAF_CACHE` | portal | `false` | `true` en producción (el script lo activa) |
+| `SESSION_COOKIE_SECURE` | portal | `false` | `true` en la nube (HTTPS): la cookie de sesión solo viaja cifrada (el script lo activa) |
 
 `scripts/deploy-cloudrun.sh` ya activa `EXIGIR_CLAVES_FUERTES` y `THYMELEAF_CACHE`.
 

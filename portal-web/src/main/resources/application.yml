@@ -1,12 +1,19 @@
 server:
   port: ${PORT:8083}
+  # Detras del proxy de Cloud Run el HTTPS termina antes de llegar aqui: sin esto, las redirecciones
+  # salian como http:// en lugar de https://. Respeta X-Forwarded-Proto/Host.
+  forward-headers-strategy: framework
   servlet:
     session:
+      # Solo cookie: sin ';jsessionid=...' pegado a la URL.
+      tracking-modes: cookie
       # Inactividad maxima: pasado este tiempo sin pedidos, la sesion expira y se pide login de nuevo.
       timeout: ${SESSION_TIMEOUT:30m}
       cookie:
         http-only: true
         same-site: lax
+        # true en la nube (HTTPS); en local el portal corre en http y la cookie Secure no se enviaria.
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 spring:
   application:

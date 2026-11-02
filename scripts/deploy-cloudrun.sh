@@ -62,7 +62,7 @@ GATEWAY_URL="$(url_de gateway-service)"
 # El portal sube las fotos a Cloudinary, asi que tambien lleva CLOUDINARY_URL.
 echo "==> Desplegando portal-web"
 gcloud run deploy portal-web --image "${REPO}/portal-web:${TAG}" "${COMUN[@]}" \
-  --set-env-vars "GATEWAY_URL=${GATEWAY_URL},THYMELEAF_CACHE=true" \
+  --set-env-vars "GATEWAY_URL=${GATEWAY_URL},THYMELEAF_CACHE=true,SESSION_COOKIE_SECURE=true" \
   --set-secrets "CLOUDINARY_URL=cloudinary-url:latest"
 PORTAL_URL="$(url_de portal-web)"
 
