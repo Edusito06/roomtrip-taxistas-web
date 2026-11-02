@@ -170,11 +170,12 @@ Implementado y probado (`mvn clean verify`, 140 pruebas):
 - Gateway con circuit breaker que responde 503 legible a cualquier método HTTP.
 
 Documentación: [`docs/API.md`](docs/API.md) (contrato para la app), [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md),
-[`docs/ESQUEMA-BD.md`](docs/ESQUEMA-BD.md) y [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md).
+[`docs/ESQUEMA-BD.md`](docs/ESQUEMA-BD.md), [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) y el
+[`manual de instalación`](docs/MANUAL-INSTALACION.md) (probado desde cero en una copia limpia).
 
 Pendiente:
 
 - [ ] Despliegue en Google Cloud (cuentas de Google Cloud, Atlas y Cloudinary; ver `docs/DESPLIEGUE.md`).
 - [ ] Integración de la app Android con esta API y enlace de identidades con Firebase Auth (Lab 6).
-- [ ] Manual de instalación y manual de usuario (entregables finales del curso).
+- [ ] Manual de usuario (entregable final del curso).
 - [ ] OPEX final con los precios verificados.
