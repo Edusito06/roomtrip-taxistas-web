@@ -1,5 +1,7 @@
 # --- Etapa 1: compilar ---
-FROM maven:3.9-eclipse-temurin-21 AS build
+# El JAR no depende de la arquitectura: se compila en la del equipo que construye (rapido) y solo
+# la etapa final se fuerza a la arquitectura del destino (BuildKit rellena TARGETPLATFORM).
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 
 # Copiar primero los POMs para aprovechar la cache de capas de Docker:

@@ -26,7 +26,8 @@ COMUN=(--region "$REGION" --allow-unauthenticated --memory 512Mi --cpu 1 --min-i
 construir() {
   local servicio="$1"
   echo "==> Construyendo ${servicio}:${TAG}"
-  docker build -f "${servicio}/Dockerfile" -t "${REPO}/${servicio}:${TAG}" .
+  # Cloud Run corre en linux/amd64; en un Mac con Apple Silicon el valor por defecto seria arm64.
+  docker build --platform linux/amd64 -f "${servicio}/Dockerfile" -t "${REPO}/${servicio}:${TAG}" .
   docker push "${REPO}/${servicio}:${TAG}"
 }
 
