@@ -95,7 +95,8 @@ Todo pasa por el gateway. El flujo de la app móvil es:
 1. `POST /api/auth/login` con la credencial de servicio `APP_MOVIL` → devuelve un JWT.
 2. `GET /api/taxistas/disponibles` con `Authorization: Bearer <token>` → solo taxistas
    `APROBADO` + `DISPONIBLE` (RF-API-001).
-3. `PATCH /api/taxistas/{id}/disponibilidad` con `EN_SERVICIO` al asignarle un traslado.
+3. `POST /api/servicios` al pedir el taxi en el checkout; el taxista lo acepta y lo avanza hasta
+   `FINALIZADO` validando el QR del cliente (ver `docs/API.md`, sección 4).
 4. `POST /api/calificaciones` al finalizar el servicio (RF-TAX-017).
 
 | Método | Ruta | Rol | Requisito |
@@ -158,15 +159,22 @@ docker compose start taxista-service
 
 ## Estado y siguiente paso
 
-El scaffold cubre el camino completo de autoregistro, aprobación, disponibilidad y calificación.
-Lo que falta antes del Lab 7:
+Implementado y probado (`mvn clean verify`, 140 pruebas):
 
-- [x] Subida real de fotos a Cloudinary desde el portal (`portal-web` sube el archivo con el SDK
-      de Cloudinary al enviar `/registro`; requiere un `CLOUDINARY_URL` real en `.env`).
-- [x] Pantalla del taxista para ver el estado de su solicitud y activar su disponibilidad
-      (`/mi-cuenta`, solo visible para el rol TAXISTA).
-- [x] Sincronizar `valoracionPromedio` desde `calificacion-service` hacia `taxista-service`
-      (`PATCH /api/taxistas/{id}/valoracion`, ver `docs/ARQUITECTURA.md` sección 3.1).
-- [x] Pruebas de integración del gateway con Testcontainers
-      (`gateway-service/src/test/.../GatewayIntegrationTest.java`, backend simulado con WireMock).
+- Autoregistro con fotos en Cloudinary, aprobación, rechazo, **desactivación y reactivación** de taxistas.
+- Disponibilidad, **servicios de taxi** con estados y cierre por QR, y **ubicación** del taxista.
+- Calificaciones y valoración promedio sincronizada hacia `taxista-service`.
+- **Registro de eventos** y panel del Superadmin (solicitudes, padrón, servicios con mapa, eventos).
+- Seguridad: permisos por rol verificados con pruebas, límite de intentos de login, sesión con
+  inactividad máxima, validación real de imágenes y claves iniciales rotables.
+- Gateway con circuit breaker que responde 503 legible a cualquier método HTTP.
+
+Documentación: [`docs/API.md`](docs/API.md) (contrato para la app), [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md),
+[`docs/ESQUEMA-BD.md`](docs/ESQUEMA-BD.md) y [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md).
+
+Pendiente:
+
+- [ ] Despliegue en Google Cloud (cuentas de Google Cloud, Atlas y Cloudinary; ver `docs/DESPLIEGUE.md`).
+- [ ] Integración de la app Android con esta API y enlace de identidades con Firebase Auth (Lab 6).
 - [ ] Manual de instalación y manual de usuario (entregables finales del curso).
+- [ ] OPEX final con los precios verificados.

@@ -70,6 +70,76 @@ sincronizacion de una copia. El padron del Superadmin puede mostrar un promedio 
 unos segundos hasta el siguiente evento; es el mismo trade-off de consistencia eventual que ya
 describe la seccion 2 para database-per-service.
 
+## 3.2 El servicio de taxi vive en `taxista-service`
+
+El plan de proyecto pide que la app consulte, mediante esta API, los taxistas disponibles, los datos
+del taxista asignado, el estado del servicio y su ubicación. Para cumplirlo, el pedido de taxi
+(`ServicioTaxi`, colección `servicios`) se guarda aquí y no en Firebase.
+
+Por qué en este servicio y no en un tercero:
+
+- **Dueño del dato que cambia a la vez.** Aceptar un pedido cambia el servicio (`ASIGNADO`) y la
+  disponibilidad del taxista (`EN_SERVICIO`); finalizarlo los revierte. Si vivieran en servicios
+  distintos habría que coordinar dos escrituras por HTTP. Aquí son dos documentos de la misma base.
+- **RES-04.** La app Android nunca toca esta base: crea, consulta y avanza los servicios por REST.
+  Que los pedidos vivan en el subsistema web es lo que hace verificable esa restricción.
+
+```
+SOLICITADO ──aceptar──▶ ASIGNADO ──▶ EN_CAMINO ──▶ EN_TRASLADO ──(QR)──▶ FINALIZADO
+```
+
+- **Flujo lineal.** No se puede saltar un estado; solo el taxista asignado avanza el servicio.
+- **Aceptación exclusiva.** `ServicioTaxi` lleva un campo `@Version` (bloqueo optimista). Si dos
+  taxistas aceptan el mismo pedido a la vez, el segundo guardado falla y recibe un 409 "el pedido ya
+  fue tomado". No hace falta un bloqueo distribuido: es una sola base y una sola escritura.
+- **El QR cierra el servicio.** Al crear el pedido se genera un `qrCodigo` aleatorio que el hotel
+  envía al cliente. `FINALIZADO` solo se registra si el taxista presenta ese código desde
+  `EN_TRASLADO`. El taxista nunca recibe el código en las respuestas: lo lee del QR del cliente.
+- **Ubicación.** `PUT /api/taxistas/{id}/ubicacion` solo se acepta con el taxista `EN_SERVICIO`
+  ("durante un servicio activo"). Se guarda solo la última posición dentro del documento del taxista;
+  no es un historial. El cliente la consulta por polling con `GET`.
+
+Decisión que el equipo de la app debe conocer: como los pedidos viven aquí, la app debe crear y
+consultar el servicio por esta API y no duplicarlo en Firestore. El detalle del contrato está en
+[`API.md`](API.md).
+
+## 3.3 Habilitación del taxista
+
+`EstadoHabilitacion` tiene cuatro valores:
+
+| Estado | Cómo se llega | Puede prestar servicios |
+|---|---|---|
+| `PENDIENTE` | Autoregistro | No |
+| `APROBADO` | El Superadmin aprueba la solicitud | Sí |
+| `RECHAZADO` | El Superadmin rechaza la solicitud | No, y no puede iniciar sesión |
+| `INHABILITADO` | El Superadmin desactiva a un aprobado | No, pero conserva sesión y perfil |
+
+El plan de proyecto dice que el Superadmin "puede activar y desactivar" taxistas; `INHABILITADO` es
+ese estado. Dos reglas, decididas con el equipo:
+
+1. **No se desactiva a un taxista con un traslado en curso** (`ASIGNADO`, `EN_CAMINO` o
+   `EN_TRASLADO`): responde 409 hasta que termine, para no dejar a un cliente sin taxista.
+2. **Un inhabilitado deja de ser asignable** (no aparece en `/disponibles`, no acepta pedidos, no
+   puede ponerse `DISPONIBLE`) pero **puede seguir entrando** a ver su perfil y el motivo. Quedó
+   así a propósito: bloquearle el acceso entero le impediría enterarse de por qué.
+
+Desactivar exige un motivo y reactivar lo devuelve a `APROBADO` con disponibilidad `NO_DISPONIBLE`.
+
+## 3.4 Registro de eventos
+
+El requerimiento de calidad "el sistema deberá registrar eventos relevantes" y la función del
+Superadmin "ver los logs de los eventos sucedidos" se resuelven con una colección `eventos` de solo
+escritura y lectura (nunca se edita) y `GET /api/eventos` para el Superadmin.
+
+Se registran: `TAXISTA_REGISTRADO`, `TAXISTA_APROBADO`, `TAXISTA_RECHAZADO`, `TAXISTA_INHABILITADO`,
+`TAXISTA_REACTIVADO`, `DISPONIBILIDAD_CAMBIADA`, `LOGIN_OK`, `LOGIN_FALLIDO`, `LOGIN_BLOQUEADO` y los
+cambios de servicio (`SERVICIO_SOLICITADO`, `SERVICIO_ASIGNADO`, `SERVICIO_EN_CAMINO`,
+`SERVICIO_EN_TRASLADO`, `SERVICIO_FINALIZADO`).
+
+Dos decisiones: el evento se registra **en el controlador**, donde se conoce al actor (el sujeto del
+JWT), y no en la capa de negocio; y **la ubicación no se registra**, porque es periódica y llenaría el
+log. El portal muestra los últimos 200 eventos.
+
 ## 4. Por qué el frontend es server-side
 
 Una SPA en React se vería más moderna, pero agrega un segundo despliegue, configuración de CORS,
@@ -79,6 +149,16 @@ y el token vive en la sesión del servidor en lugar de quedar expuesto a scripts
 
 El RNF-POR-004 solo pide que funcione en Chrome, Edge y Firefox. Bootstrap 5 lo resuelve.
 
+**Sesión del portal.** El token JWT vive en la sesión del servidor, no en el navegador. La sesión
+expira tras **30 minutos de inactividad** (`SESSION_TIMEOUT`); al expirar, la siguiente página privada
+redirige a `/login?expirada`, que muestra el aviso. La cookie es `HttpOnly` y `SameSite=Lax`. Las
+páginas dinámicas se envían con `Cache-Control: no-store`: sin eso, tras cerrar sesión la flecha
+"atrás" mostraba el panel guardado en la caché del navegador. Los recursos estáticos (`/css`, `/js`)
+sí se cachean, y van versionados por hash para que un despliegue nunca deje una hoja de estilos vieja.
+
+**Diseño.** La web reutiliza la paleta de la app Android (`colors.xml`: turquesa `#18C0C1`, fondo
+`#F2F5FA`, Poppins) para que los dos subsistemas se vean como un solo producto.
+
 ## 5. Autenticación
 
 `taxista-service` emite JWT firmados en HS256 con un secreto compartido. El gateway los valida en
@@ -87,10 +167,12 @@ servicio por error no abra un hueco.
 
 Cuatro roles viajan en el claim `roles`:
 
-- `SUPERADMIN`: aprueba y rechaza solicitudes desde el portal.
-- `TAXISTA`: ve y gestiona su propio registro.
-- `APP_MOVIL`: credencial de servicio que usa la app Android. Así la app no consume la API sin
-  autenticar, que sería el hueco más obvio del sistema.
+- `SUPERADMIN`: aprueba, rechaza, desactiva y reactiva taxistas, y ve servicios y eventos.
+- `TAXISTA`: gestiona su perfil y presta servicios: acepta pedidos, avanza el estado, reporta su
+  ubicación y finaliza con el QR. Solo opera sobre sus propios datos y servicios.
+- `APP_MOVIL`: credencial de servicio que usa la app Android para las operaciones del cliente y del
+  hotel (crear el pedido, consultar estado, ubicación y valoración, calificar). Así la app no
+  consume la API sin autenticar, que sería el hueco más obvio del sistema.
 - `SERVICIO_INTERNO`: lo usa exclusivamente `calificacion-service` para llamar a
   `PATCH /api/taxistas/{id}/valoracion` en `taxista-service` (RN-013, ver sección 3). No lo emite
   `taxista-service` para nadie más: `calificacion-service` firma su propio token de un solo uso con
@@ -100,6 +182,43 @@ Cuatro roles viajan en el claim `roles`:
 
 Las contraseñas se guardan con BCrypt, nunca en texto plano (requisito de calidad del plan de
 proyecto).
+
+### 5.1 Control de acceso verificable
+
+El requerimiento de calidad pide "restringir las operaciones según el rol autenticado" y que "un
+cliente solo acceda a sus propios ... servicios de taxi". Cada endpoint declara su regla con
+`@PreAuthorize`, y esas reglas **se prueban**: `PermisosPorRolTest` recorre una matriz de llamadas
+(rol, ruta, resultado esperado) contra la cadena de seguridad real, con los servicios de negocio
+simulados. Cubre 63 casos en `taxista-service` y 13 en `calificacion-service`: por ejemplo, que un
+taxista no pueda ver el servicio de otro, ni aprobar solicitudes, ni leer los eventos. Las pruebas se
+verificaron rompiendo permisos a propósito para confirmar que fallan cuando deben.
+
+### 5.2 Credenciales iniciales
+
+`CargaInicial` crea al arrancar el Superadmin y la cuenta `APP_MOVIL`. El secreto manda: si la
+contraseña configurada cambia, al reiniciar se actualiza la de la cuenta existente, de modo que rotar
+una clave es cambiar el secreto. Con `EXIGIR_CLAVES_FUERTES=true` (lo activa el script de despliegue)
+el servicio **se niega a arrancar** si `JWT_SECRET`, `SUPERADMIN_PASSWORD` o `APP_MOVIL_PASSWORD` son
+`cambiame` o tienen menos de 12 caracteres. En desarrollo solo avisa.
+
+### 5.3 Límite de intentos de login
+
+Tras 5 fallos seguidos para un mismo correo, el login responde **429** con `Retry-After` durante 15
+minutos; un login correcto reinicia el contador. Se cuenta por correo, exista o no, para no revelar
+qué correos están registrados. El bloqueo dispara un solo evento `LOGIN_BLOQUEADO`.
+
+Limitaciones aceptadas y documentadas: los contadores viven en la memoria de cada instancia, así que
+con varias instancias de Cloud Run el límite efectivo puede ser hasta 3 veces mayor y se reinicia al
+reciclarse la instancia (frena la fuerza bruta, no es un control exacto; si hiciera falta, se mueve a
+Mongo). Y alguien puede bloquear temporalmente la cuenta de otra persona fallando a propósito; por eso
+el bloqueo es corto.
+
+### 5.4 Subida de fotos
+
+El formulario público de registro sube fotos a Cloudinary. El portal valida que el archivo sea
+realmente una imagen **por sus primeros bytes** (JPG, PNG o WebP) y no por el `Content-Type` ni la
+extensión, que el cliente controla. SVG, HTML y ejecutables se rechazan aunque se llamen `.jpg`. Un
+archivo de más de 5 MB vuelve al formulario con un mensaje claro.
 
 **Mejora pendiente.** Lo más elegante sería que la app Android mande su token de Firebase Auth y
 el gateway lo valide contra el JWKS público de Google, federando los dos sistemas de identidad.
@@ -111,9 +230,12 @@ en cinco minutos; la federación se puede agregar sin tocar los microservicios d
 El RF-TAX-018 y el RNF-FIA-001 piden que la caída de esta API no rompa las reservas de la app
 móvil. Se resuelve en dos lugares:
 
-- **Aquí**: Resilience4j en el gateway, con timeout de 4 s y circuito que se abre cuando falla más
-  del 50 % de las últimas llamadas. Con el circuito abierto, el gateway responde un 503 con
-  mensaje legible al instante, sin seguir golpeando el servicio caído.
+- **Aquí**: Resilience4j en el gateway, con timeout de 4 s y un circuito que se abre cuando falla más
+  del 50 % de las últimas 10 llamadas (mínimo 5) y permanece abierto 10 s antes de probar de nuevo.
+  Con el circuito abierto, el gateway responde un 503 con mensaje legible al instante, sin seguir
+  golpeando el servicio caído. El fallback acepta **cualquier método HTTP**: la app usa también PATCH
+  y PUT (estado, disponibilidad, ubicación), y antes esas llamadas recibían un 405 en lugar del 503.
+  Lo cubre `GatewayIntegrationTest`, que levanta el gateway contra un backend lento simulado.
 - **En la app Android**: timeout en OkHttp y un mensaje al usuario cuando llega el 503. Sin esta
   mitad, el requisito no está cumplido aunque el gateway se comporte bien.
 
@@ -124,4 +246,8 @@ móvil. Se resuelve en dos lugares:
 | Arranque en frío de Cloud Run: la JVM tarda unos segundos si el servicio escaló a cero | Poner `--min-instances=1` en el gateway el día de la demo y devolverlo a 0 después |
 | El tier M0 de Atlas tiene 512 MB y 100 operaciones por segundo | Suficiente para el curso; queda documentado en el OPEX qué costaría el siguiente tier |
 | El secreto JWT compartido entre cuatro servicios | Vive en Secret Manager, nunca en el repositorio; rotarlo obliga a redesplegar los cuatro |
+| Los pedidos de taxi viven en este subsistema y no en Firebase | El equipo de la app debe crearlos y consultarlos por la API; duplicarlos en Firestore generaría dos fuentes de verdad (ver 3.2) |
+| La app necesita el token `TAXISTA` para las acciones del taxista, y ese login usa la contraseña del portal | Decidir en el Lab 6 cómo se enlaza con Firebase Auth; la federación descrita en la sección 5 lo resuelve |
+| Los contadores de intentos de login viven en memoria de cada instancia | Documentado en 5.3; migrar a Mongo si hiciera falta un límite exacto |
+| La ubicación se consulta por polling, no por push | Suficiente para el mapa del cliente; un canal en tiempo real sería una mejora, no un requisito |
 | A2 del ERS sin confirmar por el coordinador | Esta decisión se toma y se documenta; si el profesor exige MERN, el corte de servicios y los contratos REST se mantienen y solo cambia la implementación |

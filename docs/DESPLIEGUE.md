@@ -208,6 +208,46 @@ Pega el contenido de `key.json` en el secret de GitHub y borra el archivo local.
 
 ---
 
+## Variables de configuración
+
+Todo se configura por variables de entorno. Las marcadas como *secreto* van en Secret Manager (paso 3),
+nunca en el repositorio ni como `--set-env-vars`. Cloud Run inyecta `PORT` solo.
+
+| Variable | Servicio | Por defecto | Para qué |
+|---|---|---|---|
+| `JWT_SECRET` *(secreto)* | los cuatro | — | Firma y valida los JWT; debe ser el mismo en todos y de 32+ caracteres |
+| `JWT_EXPIRACION_MINUTOS` | taxista | `120` | Vigencia del token |
+| `MONGO_URI_REGISTRY` *(secreto)* | taxista | Mongo local | Conexión a `taxi_registry` |
+| `MONGO_URI_RATINGS` *(secreto)* | calificación | Mongo local | Conexión a `taxi_ratings` |
+| `SUPERADMIN_CORREO` | taxista | `superadmin@roomtrip.pe` | Cuenta inicial del Superadmin |
+| `SUPERADMIN_PASSWORD` *(secreto)* | taxista | `cambiame` | Su contraseña (12+ caracteres en producción) |
+| `APP_MOVIL_CORREO` | taxista | `app-movil@roomtrip.pe` | Credencial de servicio de la app Android |
+| `APP_MOVIL_PASSWORD` *(secreto)* | taxista | `cambiame` | Su contraseña (12+ caracteres en producción) |
+| `EXIGIR_CLAVES_FUERTES` | taxista | `false` | `true` en producción: no arranca con claves por defecto o cortas |
+| `LOGIN_MAX_INTENTOS` | taxista | `5` | Fallos seguidos antes de bloquear un correo |
+| `LOGIN_BLOQUEO_MINUTOS` | taxista | `15` | Duración del bloqueo |
+| `TAXISTA_SERVICE_URL` | gateway, calificación | local | URL de `taxista-service` |
+| `CALIFICACION_SERVICE_URL` | gateway | local | URL de `calificacion-service` |
+| `GATEWAY_URL` | portal | `http://localhost:8080` | URL pública del gateway |
+| `CLOUDINARY_URL` *(secreto)* | portal | vacío | Subida de fotos; sin ella el registro falla con un mensaje claro |
+| `SESSION_TIMEOUT` | portal | `30m` | Inactividad máxima de la sesión |
+| `THYMELEAF_CACHE` | portal | `false` | `true` en producción (el script lo activa) |
+
+`scripts/deploy-cloudrun.sh` ya activa `EXIGIR_CLAVES_FUERTES` y `THYMELEAF_CACHE`.
+
+## Compilar y probar
+
+```bash
+mvn clean verify
+```
+
+Corre las pruebas de los cuatro módulos. `GatewayIntegrationTest` usa Testcontainers, así que **necesita
+Docker corriendo**. Con Docker 29 o superior el POM raíz fija `-Dapi.version=1.44` para que el cliente
+de Testcontainers hable con el demonio; no hace falta tocar nada. En GitHub Actions lo hace el job
+`verificar` de `ci.yml` y `deploy-cloudrun.yml`.
+
+---
+
 ## OPEX
 
 ### Escenario real del curso
@@ -257,6 +297,10 @@ el arranque en frío y el tamaño de la base, y ambas son ajustables sin tocar e
 - [ ] `./scripts/deploy-cloudrun.sh` termina sin `FAIL`.
 - [ ] Los cuatro servicios responden en sus URLs de Cloud Run.
 - [ ] El `/actuator/health` de cada uno devuelve `UP`.
+- [ ] Un correo inventado se bloquea con 429 tras 5 logins fallidos, y el Superadmin sigue entrando.
+- [ ] El recorrido completo de un traslado funciona: pedido → aceptar → en camino → en traslado →
+      finalizar con QR, y el Superadmin lo ve en **Servicios** y en **Eventos**.
+- [ ] Desactivar un taxista lo saca de `/disponibles`; reactivarlo lo devuelve.
 - [ ] Un taxista se puede autoregistrar desde el portal en producción.
 - [ ] El Superadmin aprueba esa solicitud y el taxista aparece en el padrón.
 - [ ] La app Android lista taxistas disponibles contra el gateway de producción.
