@@ -52,32 +52,68 @@ Crear cuenta gratuita y copiar el `CLOUDINARY_URL` del dashboard. No pide tarjet
 
 ### 3. Guardar los secretos
 
-Nunca en el repositorio, nunca en el `Dockerfile`, nunca como `--set-env-vars`.
+Nunca en el repositorio, nunca en el `Dockerfile`, nunca como `--set-env-vars`. Se guardan en Secret
+Manager con este bloque, que **no obliga a pegar ninguna cadena completa**: genera lo que se puede
+generar, toma la URL de Cloudinary del `.env` y de Atlas pide solo la contraseña, con la entrada oculta.
+Si un secreto ya existe, no lo toca, así que se puede volver a correr.
 
 ```bash
-# Secreto del JWT, compartido por los cuatro servicios
-openssl rand -base64 48 | gcloud secrets create jwt-secret --data-file=-
+cd /ruta/al/proyecto
+P=TU_PROJECT_ID
+mk(){ gcloud secrets describe "$1" --project $P >/dev/null 2>&1 && echo "$1: ya existe" \
+      || { gcloud secrets create "$1" --replication-policy=automatic --data-file=- --project $P >/dev/null && echo "$1: creado"; }; }
 
-# Conexiones a Atlas (una por servicio, bases distintas)
-echo -n "mongodb+srv://usuario:clave@cluster.mongodb.net/taxi_registry" \
-  | gcloud secrets create mongo-uri-registry --data-file=-
-echo -n "mongodb+srv://usuario:clave@cluster.mongodb.net/taxi_ratings" \
-  | gcloud secrets create mongo-uri-ratings --data-file=-
+openssl rand -base64 48 | tr -d '\n' | mk jwt-secret                  # compartido por los cuatro servicios
+printf 'Sa-%s' "$(openssl rand -hex 10)" | mk superadmin-password
+printf 'Am-%s' "$(openssl rand -hex 10)" | mk app-movil-password
+grep -E '^CLOUDINARY_URL=' .env | cut -d= -f2- | tr -d '\n' | mk cloudinary-url
 
-# Cloudinary
-echo -n "cloudinary://api_key:api_secret@cloud_name" \
-  | gcloud secrets create cloudinary-url --data-file=-
-
-# Credenciales iniciales
-echo -n "UNA_CLAVE_FUERTE" | gcloud secrets create superadmin-password --data-file=-
-echo -n "OTRA_CLAVE_FUERTE" | gcloud secrets create app-movil-password --data-file=-
+# Atlas: una cadena por servicio (bases distintas). Solo se escribe la contrasenia, y no se ve.
+read -s "PW?Contrasenia del usuario de Atlas: "; echo     # zsh; en bash: read -s -p "..." PW
+HOST=cluster0.xxxxx.mongodb.net; USUARIO=el_usuario_de_atlas       # ajusta estos dos valores
+printf '%s' "mongodb+srv://${USUARIO}:${PW}@${HOST}/taxi_registry" | mk mongo-uri-registry
+printf '%s' "mongodb+srv://${USUARIO}:${PW}@${HOST}/taxi_ratings"  | mk mongo-uri-ratings
+unset PW
 ```
+
+> **Por qué así y no con `echo -n "mongodb+srv://usuario:clave@..."`.** Pegar la cadena completa en un
+> comando deja la contraseña en el historial del terminal y es fácil que el pegado se duplique: en el
+> despliegue real quedó guardada **tres veces seguida**, y `taxista-service` se negó a arrancar con
+> `databaseName does not contain ' '`. Con una contraseña de **solo letras y números** además se evitan los
+> símbolos (`@`, `:`, `/`) que rompen la cadena.
 
 Las claves deben tener **al menos 12 caracteres** y no pueden ser `cambiame`. El script de despliegue
 activa `EXIGIR_CLAVES_FUERTES=true` en `taxista-service`: si `JWT_SECRET`, `SUPERADMIN_PASSWORD` o
 `APP_MOVIL_PASSWORD` son por defecto o cortas, el servicio **se niega a arrancar** en vez de quedar expuesto.
-Para rotar una clave, cambia el secreto en Secret Manager y vuelve a desplegar: al arrancar, el servicio
-actualiza la contraseña de la cuenta existente.
+
+**Rotar una clave.** Crea una versión nueva del secreto, desactiva la anterior (el límite gratuito es de
+6 versiones *activas*) y reinicia el servicio; al arrancar, `taxista-service` actualiza la contraseña de la
+cuenta existente:
+
+```bash
+printf '%s' "$NUEVA" | gcloud secrets versions add superadmin-password --data-file=- --project $P
+gcloud secrets versions disable 1 --secret=superadmin-password --project $P --quiet
+gcloud run services update taxista-service --project $P --region us-central1 --update-env-vars REINICIO=$(date +%s)
+```
+
+**Leer la contraseña del Superadmin** sin que se cuele un carácter al copiar (el terminal marca con `%` el
+final de un texto sin salto de línea, y al seleccionar a mano ese `%` se copia):
+
+```bash
+gcloud secrets versions access latest --secret=superadmin-password --project $P | pbcopy   # macOS
+```
+
+### 3.1. Permiso para que Cloud Run lea los secretos
+
+Los servicios corren con la cuenta de servicio por defecto de Compute. Dale permiso explícito de lectura
+sobre los secretos (el rol de *Editor* no lo garantiza):
+
+```bash
+N=$(gcloud projects describe $P --format="value(projectNumber)")
+gcloud projects add-iam-policy-binding $P \
+  --member="serviceAccount:${N}-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
 
 ### 4. Repositorio de imágenes
 
@@ -92,12 +128,23 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 
 ### 5. Desplegar
 
+> **Apple Silicon (Mac M1 o posterior).** Cloud Run corre en `linux/amd64`, pero un Mac construye `arm64`
+> por defecto y esas imágenes **no arrancan** en la nube. Los Dockerfiles compilan el JAR en la arquitectura
+> del equipo (rápido) y fuerzan solo la etapa final a `amd64`, y el script construye con
+> `--platform linux/amd64`. Si construyes a mano, usa ese mismo parámetro.
+
 **Camino corto:** `scripts/deploy-cloudrun.sh` hace todo lo de este paso (construir, subir, desplegar
 en orden y verificar `/actuator/health`). Es el mismo script que usa el workflow del paso 7.
 
 ```bash
 PROJECT_ID=TU_PROJECT_ID ./scripts/deploy-cloudrun.sh v1
 ```
+
+Al final de un despliegue correcto, el script **borra las versiones viejas de las imágenes** y conserva las
+`KEEP_IMAGES` más recientes de cada servicio (2 por defecto), para no pasar los 0,5 GB gratuitos de Artifact
+Registry. Con `DRY_RUN=1` solo muestra qué borraría, y con `LIMPIAR_SOLO=1` no despliega, solo limpia.
+Las versiones sin etiqueta no se tocan. Las imágenes se construyen con `--provenance=false --sbom=false`: sin
+eso, Docker Desktop agrega manifiestos de atestación que dejan entradas sueltas en el registro.
 
 El detalle manual de abajo sirve para entender qué hace y para depurar un servicio suelto.
 
@@ -113,7 +160,7 @@ export REPO=us-central1-docker.pkg.dev/$PROJECT_ID/taxi-web
 **5.1 taxista-service**
 
 ```bash
-docker build -f taxista-service/Dockerfile -t $REPO/taxista-service:v1 .
+docker build --platform linux/amd64 -f taxista-service/Dockerfile -t $REPO/taxista-service:v1 .
 docker push $REPO/taxista-service:v1
 
 gcloud run deploy taxista-service \
@@ -130,7 +177,7 @@ Necesita la URL de `taxista-service`: empuja allí la valoración promedio (RN-0
 ```bash
 TAXISTA_URL=$(gcloud run services describe taxista-service --region $REGION --format 'value(status.url)')
 
-docker build -f calificacion-service/Dockerfile -t $REPO/calificacion-service:v1 .
+docker build --platform linux/amd64 -f calificacion-service/Dockerfile -t $REPO/calificacion-service:v1 .
 docker push $REPO/calificacion-service:v1
 
 gcloud run deploy calificacion-service \
@@ -147,7 +194,7 @@ gcloud run deploy calificacion-service \
 TAXISTA_URL=$(gcloud run services describe taxista-service --region $REGION --format 'value(status.url)')
 CALIF_URL=$(gcloud run services describe calificacion-service --region $REGION --format 'value(status.url)')
 
-docker build -f gateway-service/Dockerfile -t $REPO/gateway-service:v1 .
+docker build --platform linux/amd64 -f gateway-service/Dockerfile -t $REPO/gateway-service:v1 .
 docker push $REPO/gateway-service:v1
 
 gcloud run deploy gateway-service \
@@ -163,7 +210,7 @@ gcloud run deploy gateway-service \
 ```bash
 GATEWAY_URL=$(gcloud run services describe gateway-service --region $REGION --format 'value(status.url)')
 
-docker build -f portal-web/Dockerfile -t $REPO/portal-web:v1 .
+docker build --platform linux/amd64 -f portal-web/Dockerfile -t $REPO/portal-web:v1 .
 docker push $REPO/portal-web:v1
 
 gcloud run deploy portal-web \
@@ -207,6 +254,34 @@ gcloud iam service-accounts keys create key.json --iam-account=NOMBRE@TU_PROJECT
 Pega el contenido de `key.json` en el secret de GitHub y borra el archivo local. No lo commitees.
 
 ---
+
+## Despliegue realizado
+
+Proyecto de Google Cloud `roomtrip-taxistas`, región `us-central1`, repositorio de imágenes `taxi-web`.
+
+| Servicio | URL pública |
+|---|---|
+| Portal (la web) | https://portal-web-7oe536zvqa-uc.a.run.app |
+| Gateway (API de la app Android) | https://gateway-service-7oe536zvqa-uc.a.run.app |
+| `taxista-service` y `calificacion-service` | Públicos por ahora, pero solo el gateway debe usarlos (ver el paso 6) |
+
+La primera petición tras un rato sin tráfico tarda unos segundos (arranque en frío), porque los servicios
+escalan a cero. El día de la demo conviene `--min-instances=1` en el gateway y volverlo a 0 después.
+
+## Problemas encontrados al desplegar
+
+Lo que falló en el primer despliegue real y cómo se resolvió; sirve para no repetirlo.
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| `taxista-service` no arranca: `databaseName does not contain ' '` | La cadena de Atlas quedó guardada **triplicada** al pegarla | Armar la cadena desde la contraseña con `read -s` (paso 3), sin pegar la cadena completa |
+| La imagen no arranca en Cloud Run (`exec format error`) | Imagen `arm64` construida en un Mac con Apple Silicon | Construir con `--platform linux/amd64` (ya lo hace el script) |
+| Las redirecciones del portal salían como `http://` | El HTTPS termina en el proxy de Cloud Run y Spring no lo sabía | `server.forward-headers-strategy: framework` en el portal (ya incluido) |
+| La URL llevaba `;jsessionid=...` | Seguimiento de sesión por URL | `tracking-modes: cookie` y cookie `Secure` en la nube (`SESSION_COOKIE_SECURE=true`) |
+| El despliegue falla leyendo un secreto | Falta el permiso `secretmanager.secretAccessor` | Paso 3.1 |
+| El login del Superadmin "no funciona" con la contraseña correcta | Se copió a mano con un `%` o espacios de más | Copiarla con `\| pbcopy` (paso 3) |
+| El script marca `FAIL` en un servicio recién publicado, pero responde bien después | `HTTP/2 PROTOCOL_ERROR` pasajero justo tras publicar la revisión | Volver a consultar su `/actuator/health` |
+| El proceso del despliegue "se cayó" a medias y sigue sin terminar | La sesión que lo lanzó se cerró | El script es repetible: volver a correrlo (idealmente con `nohup`) |
 
 ## Variables de configuración
 

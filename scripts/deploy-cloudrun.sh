@@ -7,7 +7,9 @@
 #
 # Uso:
 #   PROJECT_ID=mi-proyecto ./scripts/deploy-cloudrun.sh [tag]
-# Variables opcionales: REGION (us-central1), REPO_NAME (taxi-web), SUPERADMIN_CORREO, APP_MOVIL_CORREO.
+# Variables opcionales: REGION (us-central1), REPO_NAME (taxi-web), SUPERADMIN_CORREO, APP_MOVIL_CORREO,
+#   KEEP_IMAGES (2): versiones de cada imagen que se conservan en Artifact Registry tras desplegar.
+#   DRY_RUN=1: la limpieza solo muestra lo que borraria. LIMPIAR_SOLO=1: no despliega, solo limpia.
 set -euo pipefail
 
 : "${PROJECT_ID:?Define PROJECT_ID con el id del proyecto de Google Cloud}"
@@ -27,7 +29,9 @@ construir() {
   local servicio="$1"
   echo "==> Construyendo ${servicio}:${TAG}"
   # Cloud Run corre en linux/amd64; en un Mac con Apple Silicon el valor por defecto seria arm64.
-  docker build --platform linux/amd64 -f "${servicio}/Dockerfile" -t "${REPO}/${servicio}:${TAG}" .
+  # --provenance/--sbom=false: sin manifiestos de atestacion, cada version es una sola imagen con su
+  # etiqueta (Docker Desktop los agrega por defecto y dejan entradas sueltas en el registro).
+  docker build --platform linux/amd64 --provenance=false --sbom=false -f "${servicio}/Dockerfile" -t "${REPO}/${servicio}:${TAG}" .
   docker push "${REPO}/${servicio}:${TAG}"
 }
 
@@ -35,7 +39,38 @@ url_de() {
   gcloud run services describe "$1" --region "$REGION" --format 'value(status.url)'
 }
 
-for s in taxista-service calificacion-service gateway-service portal-web; do
+SERVICIOS=(taxista-service calificacion-service gateway-service portal-web)
+
+# Conserva las KEEP_IMAGES versiones etiquetadas mas recientes de cada imagen y borra las demas, para
+# no pasar los 0,5 GB gratuitos de Artifact Registry. Es seguro porque solo corre al FINAL de un despliegue
+# completo: todos los servicios ya sirven la version mas nueva, que siempre esta entre las conservadas.
+# Las versiones sin etiqueta no se tocan (borrar el hijo de una imagen en uso la rompe).
+limpiar_imagenes() {
+  local conservar="${KEEP_IMAGES:-2}" servicio digest tags n
+  echo "==> Limpiando imagenes viejas (se conservan las ${conservar} mas recientes por servicio)${DRY_RUN:+ [DRY_RUN]}"
+  for servicio in "${SERVICIOS[@]}"; do
+    n=0
+    while IFS=$'\t' read -r digest tags; do
+      [ -n "$tags" ] || continue                       # sin etiqueta: no se toca
+      n=$((n + 1))
+      [ "$n" -gt "$conservar" ] || continue            # entre las mas recientes: se queda
+      if [ -n "${DRY_RUN:-}" ]; then
+        echo "  borraria ${servicio}:${tags} (${digest:0:19}...)"
+      else
+        gcloud artifacts docker images delete "${REPO}/${servicio}@${digest}" --delete-tags --quiet --verbosity=error >/dev/null \
+          && echo "  borrada ${servicio}:${tags}"
+      fi
+    done < <(gcloud artifacts docker images list "${REPO}/${servicio}" --include-tags \
+               --sort-by=~CREATE_TIME --verbosity=error --format='value(version,tags)')
+  done
+}
+
+if [ -n "${LIMPIAR_SOLO:-}" ]; then
+  limpiar_imagenes
+  exit 0
+fi
+
+for s in "${SERVICIOS[@]}"; do
   construir "$s"
 done
 
@@ -78,6 +113,11 @@ for par in "taxista-service=${TAXISTA_URL}" "calificacion-service=${CALIF_URL}" 
     echo "  FAIL ${nombre}  ${url}"; fallo=1
   fi
 done
+
+# Solo si todo el despliegue y la verificacion salieron bien (si algo fallo, no se borra nada).
+if [ "$fallo" -eq 0 ]; then
+  limpiar_imagenes
+fi
 
 echo
 echo "Portal: ${PORTAL_URL}"

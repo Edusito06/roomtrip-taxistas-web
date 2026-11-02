@@ -149,6 +149,17 @@ docker compose start taxista-service
 
 ---
 
+## En la nube (Google Cloud Run)
+
+| | URL |
+|---|---|
+| Portal (la web) | https://portal-web-7oe536zvqa-uc.a.run.app |
+| Gateway (API que usa la app Android) | https://gateway-service-7oe536zvqa-uc.a.run.app |
+
+Datos en MongoDB Atlas, fotos en Cloudinary y secretos en Secret Manager. Cómo se instaló, qué variables usa
+y los problemas que aparecieron: [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md). La primera petición tras un rato
+sin uso tarda unos segundos porque los servicios escalan a cero.
+
 ## Convenciones del equipo
 
 - Ramas: `main` (estable, se despliega solo), `develop` (integración), `feature/<lab>-<tema>`.
@@ -175,7 +186,8 @@ Documentación: [`docs/API.md`](docs/API.md) (contrato para la app), [`docs/ARQU
 
 Pendiente:
 
-- [ ] Despliegue en Google Cloud (cuentas de Google Cloud, Atlas y Cloudinary; ver `docs/DESPLIEGUE.md`).
+- [x] Despliegue en Google Cloud (Cloud Run + Atlas + Cloudinary), verificado de punta a punta.
+- [ ] Despliegue automático desde GitHub (pide credenciales de Google en GitHub; hoy se despliega con `scripts/deploy-cloudrun.sh`).
 - [ ] Integración de la app Android con esta API y enlace de identidades con Firebase Auth (Lab 6).
 - [ ] Manual de usuario (entregable final del curso).
 - [ ] OPEX final con los precios verificados.
