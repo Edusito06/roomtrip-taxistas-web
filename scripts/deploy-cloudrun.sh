@@ -23,7 +23,8 @@ APP_MOVIL_CORREO="${APP_MOVIL_CORREO:-app-movil@roomtrip.pe}"
 cd "$(dirname "$0")/.."
 
 # Flags comunes: escala a cero y tope de 3 instancias para no salirse del free tier.
-COMUN=(--region "$REGION" --allow-unauthenticated --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3)
+# --cpu-boost: mas CPU solo mientras arranca el contenedor, para acortar el arranque en frio de la JVM.
+COMUN=(--region "$REGION" --allow-unauthenticated --memory 512Mi --cpu 1 --cpu-boost --min-instances 0 --max-instances 3)
 
 construir() {
   local servicio="$1"
@@ -90,7 +91,7 @@ CALIF_URL="$(url_de calificacion-service)"
 
 echo "==> Desplegando gateway-service"
 gcloud run deploy gateway-service --image "${REPO}/gateway-service:${TAG}" "${COMUN[@]}" \
-  --set-env-vars "TAXISTA_SERVICE_URL=${TAXISTA_URL},CALIFICACION_SERVICE_URL=${CALIF_URL}" \
+  --set-env-vars "TAXISTA_SERVICE_URL=${TAXISTA_URL},CALIFICACION_SERVICE_URL=${CALIF_URL},GATEWAY_TIMEOUT=20s" \
   --set-secrets "JWT_SECRET=jwt-secret:latest"
 GATEWAY_URL="$(url_de gateway-service)"
 

@@ -27,7 +27,7 @@ USER app
 COPY --from=build /build/taxista-service/target/*.jar app.jar
 
 # Cloud Run inyecta PORT; en local cae al 8081 del application.yml
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -Xss512k"
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"
 EXPOSE 8081
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

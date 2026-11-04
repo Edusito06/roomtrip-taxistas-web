@@ -33,7 +33,10 @@ resilience4j:
   timelimiter:
     configs:
       default:
-        timeoutDuration: 4s
+        # 4 s en local (falla rapido si un servicio se cuelga). En Cloud Run el script lo sube a 20 s:
+        # un servicio que escalo a cero tarda 10 a 14 s en arrancar y con 4 s la primera peticion
+        # tras un rato de inactividad devolvia 503 aunque el servicio estuviera sano.
+        timeoutDuration: ${GATEWAY_TIMEOUT:4s}
     instances:
       taxistaCB:
         baseConfig: default

@@ -23,7 +23,7 @@ USER app
 
 COPY --from=build /build/portal-web/target/*.jar app.jar
 
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -Xss512k"
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"
 ENV THYMELEAF_CACHE=true
 EXPOSE 8083
 

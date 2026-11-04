@@ -23,7 +23,7 @@ USER app
 
 COPY --from=build /build/calificacion-service/target/*.jar app.jar
 
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -Xss512k"
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"
 EXPOSE 8082
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

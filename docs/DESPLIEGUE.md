@@ -280,6 +280,7 @@ Lo que falló en el primer despliegue real y cómo se resolvió; sirve para no r
 | La URL llevaba `;jsessionid=...` | Seguimiento de sesión por URL | `tracking-modes: cookie` y cookie `Secure` en la nube (`SESSION_COOKIE_SECURE=true`) |
 | El despliegue falla leyendo un secreto | Falta el permiso `secretmanager.secretAccessor` | Paso 3.1 |
 | El login del Superadmin "no funciona" con la contraseña correcta | Se copió a mano con un `%` o espacios de más | Copiarla con `\| pbcopy` (paso 3) |
+| La primera petición tras un rato sin uso devuelve `503` o `500` y las siguientes funcionan | Arranque en frío: `taxista-service` tarda 10 a 14 s en arrancar y el gateway esperaba 4 s | `GATEWAY_TIMEOUT=20s` en la nube, `--cpu-boost` al desplegar y `-XX:TieredStopAtLevel=1` en la JVM. Para una demo, abrir el portal unos minutos antes o usar `--min-instances=1` ese día |
 | El script marca `FAIL` en un servicio recién publicado, pero responde bien después | `HTTP/2 PROTOCOL_ERROR` pasajero justo tras publicar la revisión | Volver a consultar su `/actuator/health` |
 | El proceso del despliegue "se cayó" a medias y sigue sin terminar | La sesión que lo lanzó se cerró | El script es repetible: volver a correrlo (idealmente con `nohup`) |
 
@@ -301,6 +302,7 @@ nunca en el repositorio ni como `--set-env-vars`. Cloud Run inyecta `PORT` solo.
 | `EXIGIR_CLAVES_FUERTES` | taxista | `false` | `true` en producción: no arranca con claves por defecto o cortas |
 | `LOGIN_MAX_INTENTOS` | taxista | `5` | Fallos seguidos antes de bloquear un correo |
 | `LOGIN_BLOQUEO_MINUTOS` | taxista | `15` | Duración del bloqueo |
+| `GATEWAY_TIMEOUT` | gateway | `4s` | Tiempo máximo de espera a un servicio. En Cloud Run el script lo sube a `20s` para aguantar el arranque en frío (10 a 14 s) |
 | `TAXISTA_SERVICE_URL` | gateway, calificación | local | URL de `taxista-service` |
 | `CALIFICACION_SERVICE_URL` | gateway | local | URL de `calificacion-service` |
 | `GATEWAY_URL` | portal | `http://localhost:8080` | URL pública del gateway |
