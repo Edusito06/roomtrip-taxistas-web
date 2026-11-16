@@ -141,7 +141,7 @@ PROJECT_ID=TU_PROJECT_ID ./scripts/deploy-cloudrun.sh v1
 ```
 
 Al final de un despliegue correcto, el script **borra las versiones viejas de las imágenes** y conserva las
-`KEEP_IMAGES` más recientes de cada servicio (2 por defecto), para no pasar los 0,5 GB gratuitos de Artifact
+`KEEP_IMAGES` más recientes de cada servicio (1 por defecto: con 2 el registro pasó los 0,5 GB gratuitos), para no pasar los 0,5 GB gratuitos de Artifact
 Registry. Con `DRY_RUN=1` solo muestra qué borraría, y con `LIMPIAR_SOLO=1` no despliega, solo limpia.
 Las versiones sin etiqueta no se tocan. Las imágenes se construyen con `--provenance=false --sbom=false`: sin
 eso, Docker Desktop agrega manifiestos de atestación que dejan entradas sueltas en el registro.

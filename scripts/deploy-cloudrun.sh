@@ -8,7 +8,7 @@
 # Uso:
 #   PROJECT_ID=mi-proyecto ./scripts/deploy-cloudrun.sh [tag]
 # Variables opcionales: REGION (us-central1), REPO_NAME (taxi-web), SUPERADMIN_CORREO, APP_MOVIL_CORREO,
-#   KEEP_IMAGES (2): versiones de cada imagen que se conservan en Artifact Registry tras desplegar.
+#   KEEP_IMAGES (1): versiones de cada imagen que se conservan en Artifact Registry tras desplegar.
 #   DRY_RUN=1: la limpieza solo muestra lo que borraria. LIMPIAR_SOLO=1: no despliega, solo limpia.
 set -euo pipefail
 
@@ -47,7 +47,7 @@ SERVICIOS=(taxista-service calificacion-service gateway-service portal-web)
 # completo: todos los servicios ya sirven la version mas nueva, que siempre esta entre las conservadas.
 # Las versiones sin etiqueta no se tocan (borrar el hijo de una imagen en uso la rompe).
 limpiar_imagenes() {
-  local conservar="${KEEP_IMAGES:-2}" servicio digest tags n
+  local conservar="${KEEP_IMAGES:-1}" servicio digest tags n
   echo "==> Limpiando imagenes viejas (se conservan las ${conservar} mas recientes por servicio)${DRY_RUN:+ [DRY_RUN]}"
   for servicio in "${SERVICIOS[@]}"; do
     n=0
