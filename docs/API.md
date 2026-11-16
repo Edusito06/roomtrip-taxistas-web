@@ -102,7 +102,7 @@ código basta. Con Cloud Run, la primera llamada tras un rato inactivo puede tar
 
 ## 3. Taxistas
 
-Objeto `Taxista` que devuelven estos endpoints (nunca incluye la contraseña):
+Objeto `Taxista` completo, que ven el **Superadmin** y el **propio taxista** (nunca incluye la contraseña):
 
 ```json
 {
@@ -123,6 +123,12 @@ Objeto `Taxista` que devuelven estos endpoints (nunca incluye la contraseña):
 }
 ```
 
+**Vista reducida (`TaxistaResumen`)**, lo que recibe la app: `id`, `nombres`, `apellidos`, `correo`, `telefono`,
+`fotoUrl`, `vehiculoMarca`, `vehiculoModelo`, `vehiculoAnio`, `vehiculoColor`, `placa`, `fotoVehiculoUrl`,
+`estadoHabilitacion`, `estadoDisponibilidad`, `valoracionPromedio` y `totalCalificaciones`. **No** incluye número
+de documento, fecha de nacimiento ni domicilio: la app no los necesita y la credencial `APP_MOVIL` viaja dentro
+del APK, de donde se puede extraer.
+
 - `estadoHabilitacion`: `PENDIENTE`, `APROBADO`, `RECHAZADO` o `INHABILITADO` (desactivado por el Superadmin tras haber sido
   aprobado). Solo un `APROBADO` presta servicios, recibe pedidos y aparece en `/disponibles`. Un `INHABILITADO` puede seguir
   entrando y viendo su perfil; el Superadmin puede reactivarlo.
@@ -132,8 +138,9 @@ Objeto `Taxista` que devuelven estos endpoints (nunca incluye la contraseña):
 |---|---|---|
 | `POST /api/taxistas/registro` | público | Autoregistro (RF-WTX-001/002). Lo usa el portal web. Queda `PENDIENTE` |
 | `PATCH /api/taxistas/{id}/habilitacion` | `SUPERADMIN` | Desactiva o reactiva a un taxista aprobado. Cuerpo `{ "activo": false, "motivo": "..." }` (el motivo es obligatorio al desactivar) o `{ "activo": true }`. Si tiene un traslado en curso: 409 |
-| `GET /api/taxistas/disponibles` | `APP_MOVIL`, `SUPERADMIN` | Taxistas `APROBADO` y `DISPONIBLE` (RF-API-001) |
-| `GET /api/taxistas/{id}` | `APP_MOVIL`, `SUPERADMIN`, el propio taxista | Datos del taxista asignado: foto, vehículo, valoración |
+| `GET /api/taxistas/disponibles` | `APP_MOVIL`, `SUPERADMIN` | Taxistas `APROBADO` y `DISPONIBLE` (RF-API-001). Devuelve la **vista reducida** (ver abajo) |
+| `GET /api/taxistas/buscar?correo=...` | `APP_MOVIL`, `SUPERADMIN` | Encuentra a un taxista por su correo. Es el **puente con Firebase**: la app conoce al taxista por su cuenta de Firebase, no por el id de este sistema. Devuelve la vista reducida; `404` si ese correo no tiene un taxista registrado |
+| `GET /api/taxistas/{id}` | `APP_MOVIL`, `SUPERADMIN`, el propio taxista | Datos del taxista. La **app** recibe la vista reducida; el Superadmin y el propio taxista, el objeto completo |
 | `PATCH /api/taxistas/{id}/disponibilidad` | `APP_MOVIL`, `SUPERADMIN`, el propio taxista | Cuerpo `{ "estado": "DISPONIBLE" }`. Un taxista no aprobado no puede ponerse disponible (409) |
 | `PUT /api/taxistas/{id}/ubicacion` | `APP_MOVIL`, el propio taxista | Cuerpo `{ "latitud": -12.04, "longitud": -77.03 }`. **Solo si el taxista está `EN_SERVICIO`**, si no responde 409 |
 | `GET /api/taxistas/{id}/ubicacion` | `APP_MOVIL`, `SUPERADMIN`, el propio taxista | Última posición para el mapa del cliente |

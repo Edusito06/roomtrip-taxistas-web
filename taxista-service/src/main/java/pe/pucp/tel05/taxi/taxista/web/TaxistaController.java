@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import pe.pucp.tel05.taxi.taxista.domain.Taxista;
@@ -28,6 +30,7 @@ import pe.pucp.tel05.taxi.taxista.web.dto.CambioHabilitacionRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.DecisionAprobacionRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.RegistroTaxistaRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.TaxistaResponse;
+import pe.pucp.tel05.taxi.taxista.web.dto.TaxistaResumenResponse;
 import pe.pucp.tel05.taxi.taxista.web.dto.UbicacionRequest;
 import pe.pucp.tel05.taxi.taxista.web.dto.UbicacionResponse;
 
@@ -80,14 +83,29 @@ public class TaxistaController {
      */
     @GetMapping("/disponibles")
     @PreAuthorize("hasAnyRole('SUPERADMIN','APP_MOVIL')")
-    public List<TaxistaResponse> listarDisponibles() {
-        return servicio.listarDisponibles().stream().map(TaxistaResponse::desde).toList();
+    public List<TaxistaResumenResponse> listarDisponibles() {
+        // Vista reducida: la app (y su credencial, que viaja dentro del APK) no necesita el documento,
+        // el domicilio ni la fecha de nacimiento de los taxistas.
+        return servicio.listarDisponibles().stream().map(TaxistaResumenResponse::desde).toList();
+    }
+
+    /**
+     * La app movil resuelve el id de un taxista a partir de su correo (el de su cuenta de Firebase).
+     * Devuelve la vista reducida, sin documento, fecha de nacimiento ni domicilio.
+     */
+    @GetMapping("/buscar")
+    @PreAuthorize("hasAnyRole('SUPERADMIN','APP_MOVIL')")
+    public TaxistaResumenResponse buscarPorCorreo(@RequestParam String correo) {
+        return TaxistaResumenResponse.desde(servicio.obtenerPorCorreo(correo));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPERADMIN','APP_MOVIL') or #id == authentication.name")
-    public TaxistaResponse obtener(@PathVariable String id) {
-        return TaxistaResponse.desde(servicio.obtener(id));
+    public Object obtener(@PathVariable String id, Authentication auth) {
+        Taxista t = servicio.obtener(id);
+        // La app movil recibe la vista reducida; el Superadmin y el propio taxista ven todos sus datos.
+        boolean esApp = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_APP_MOVIL"));
+        return esApp ? TaxistaResumenResponse.desde(t) : TaxistaResponse.desde(t);
     }
 
     /** RF-WTX-004: aprobar o rechazar. Solo el Superadmin. */

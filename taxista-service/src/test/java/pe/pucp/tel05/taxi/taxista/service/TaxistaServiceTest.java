@@ -172,6 +172,25 @@ class TaxistaServiceTest {
     }
 
     @Test
+    @DisplayName("La app encuentra al taxista por su correo, sin importar mayusculas ni espacios")
+    void buscarPorCorreoNormaliza() {
+        Taxista t = new Taxista();
+        t.setId("t20");
+        when(repositorio.findByCorreo("juan.perez@example.com")).thenReturn(Optional.of(t));
+
+        assertEquals("t20", servicio.obtenerPorCorreo("  Juan.Perez@Example.COM ").getId());
+    }
+
+    @Test
+    @DisplayName("Un correo sin taxista registrado responde 'no encontrado'")
+    void buscarPorCorreoInexistente() {
+        when(repositorio.findByCorreo(anyString())).thenReturn(Optional.empty());
+
+        assertThrows(TaxistaService.RecursoNoEncontradoException.class,
+                () -> servicio.obtenerPorCorreo("nadie@example.com"));
+    }
+
+    @Test
     @DisplayName("RF-API-001: disponibles filtra por APROBADO + DISPONIBLE")
     void disponiblesFiltraPorAmbosEstados() {
         when(repositorio.findByEstadoHabilitacionAndEstadoDisponibilidad(

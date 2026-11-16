@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -27,6 +29,8 @@ import pe.pucp.tel05.taxi.taxista.service.ServicioTaxiService;
 import pe.pucp.tel05.taxi.taxista.service.TaxistaService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -82,6 +86,7 @@ class PermisosPorRolTest {
         s.setTaxistaId("t1");
 
         when(taxistas.obtener(anyString())).thenReturn(t);
+        when(taxistas.obtenerPorCorreo(anyString())).thenReturn(t);
         when(taxistas.listarTodos()).thenReturn(List.of());
         when(taxistas.listarPendientes()).thenReturn(List.of());
         when(taxistas.listarDisponibles()).thenReturn(List.of());
@@ -142,6 +147,12 @@ class PermisosPorRolTest {
                 caso(GET, "/api/taxistas/t1", null, TX, "t2", 403),
                 caso(GET, "/api/taxistas/t1", null, APP, "app", PERMITIDO),
 
+                // --- Buscar por correo (puente Firebase <-> API): app movil y Superadmin; nunca un taxista
+                caso(GET, "/api/taxistas/buscar?correo=juan@x.pe", null, APP, "app", PERMITIDO),
+                caso(GET, "/api/taxistas/buscar?correo=juan@x.pe", null, SA, "a1", PERMITIDO),
+                caso(GET, "/api/taxistas/buscar?correo=juan@x.pe", null, TX, "t1", 403),
+                caso(GET, "/api/taxistas/buscar?correo=juan@x.pe", null, null, null, 401),
+
                 // --- Aprobar/rechazar y activar/desactivar: solo el Superadmin
                 caso(PATCH, "/api/taxistas/t1/aprobacion", "{\"aprobado\":true}", SA, "a1", PERMITIDO),
                 caso(PATCH, "/api/taxistas/t1/aprobacion", "{\"aprobado\":true}", APP, "app", 403),
@@ -197,6 +208,34 @@ class PermisosPorRolTest {
                 caso(PATCH, "/api/servicios/s1/estado", "{\"estado\":\"EN_CAMINO\"}", APP, "app", 403),
                 caso(POST, "/api/servicios/s1/finalizar", "{\"qrCodigo\":\"x\"}", TX, "t1", PERMITIDO),
                 caso(POST, "/api/servicios/s1/finalizar", "{\"qrCodigo\":\"x\"}", APP, "app", 403));
+    }
+
+    @Test
+    @DisplayName("La app movil recibe la vista reducida del taxista; el Superadmin y el propio taxista, todo")
+    void laAppNoRecibeDatosPersonales() throws Exception {
+        Taxista t = new Taxista();
+        t.setId("t1");
+        t.setNumeroDocumento("45678912");
+        t.setDomicilio("Av. Larco 123");
+        when(taxistas.obtener("t1")).thenReturn(t);
+        when(taxistas.listarDisponibles()).thenReturn(List.of(t));
+
+        for (String ruta : new String[] {"/api/taxistas/t1", "/api/taxistas/disponibles"}) {
+            String comoApp = mvc.perform(request(HttpMethod.GET, ruta)
+                    .with(jwt().jwt(j -> j.subject("app")).authorities(new SimpleGrantedAuthority("ROLE_APP_MOVIL"))))
+                    .andReturn().getResponse().getContentAsString();
+            assertFalse(comoApp.contains("45678912") || comoApp.contains("Larco"), ruta + " no debe exponer datos personales a la app");
+        }
+
+        String comoAdmin = mvc.perform(request(HttpMethod.GET, "/api/taxistas/t1")
+                .with(jwt().jwt(j -> j.subject("a1")).authorities(new SimpleGrantedAuthority("ROLE_SUPERADMIN"))))
+                .andReturn().getResponse().getContentAsString();
+        assertTrue(comoAdmin.contains("45678912"), "el Superadmin si ve el documento");
+
+        String comoPropio = mvc.perform(request(HttpMethod.GET, "/api/taxistas/t1")
+                .with(jwt().jwt(j -> j.subject("t1")).authorities(new SimpleGrantedAuthority("ROLE_TAXISTA"))))
+                .andReturn().getResponse().getContentAsString();
+        assertTrue(comoPropio.contains("Larco"), "el propio taxista ve su domicilio");
     }
 
     @ParameterizedTest(name = "{0} {1} como {3} ({4}) -> {5}")

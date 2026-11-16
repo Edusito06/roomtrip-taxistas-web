@@ -225,7 +225,16 @@ public class TaxistaService {
     }
 
     public Optional<Taxista> buscarPorCorreo(String correo) {
-        return repositorio.findByCorreo(correo.toLowerCase());
+        return repositorio.findByCorreo(correo.toLowerCase().trim());
+    }
+
+    /**
+     * La app movil identifica al taxista por su cuenta de Firebase, que no tiene relacion con el id de
+     * este sistema; el correo es el puente. Falla con 404 si no hay un taxista registrado con ese correo.
+     */
+    public Taxista obtenerPorCorreo(String correo) {
+        return buscarPorCorreo(correo)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No hay un taxista registrado con ese correo"));
     }
 
     /**
