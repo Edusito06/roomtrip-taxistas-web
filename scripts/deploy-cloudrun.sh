@@ -10,6 +10,7 @@
 # Variables opcionales: REGION (us-central1), REPO_NAME (taxi-web), SUPERADMIN_CORREO, APP_MOVIL_CORREO,
 #   KEEP_IMAGES (1): versiones de cada imagen que se conservan en Artifact Registry tras desplegar.
 #   DRY_RUN=1: la limpieza solo muestra lo que borraria. LIMPIAR_SOLO=1: no despliega, solo limpia.
+#   SOLO=portal-web (o cualquier otro servicio): construye y despliega solo ese; de los demas toma la URL que ya tienen.
 set -euo pipefail
 
 : "${PROJECT_ID:?Define PROJECT_ID con el id del proyecto de Google Cloud}"
@@ -42,6 +43,9 @@ url_de() {
 
 SERVICIOS=(taxista-service calificacion-service gateway-service portal-web)
 
+# Con SOLO=<servicio> solo ese se construye y se despliega; los otros se dejan como estan.
+quiere() { [ -z "${SOLO:-}" ] || [ "$SOLO" = "$1" ]; }
+
 # Conserva las KEEP_IMAGES versiones etiquetadas mas recientes de cada imagen y borra las demas, para
 # no pasar los 0,5 GB gratuitos de Artifact Registry. Es seguro porque solo corre al FINAL de un despliegue
 # completo: todos los servicios ya sirven la version mas nueva, que siempre esta entre las conservadas.
@@ -72,35 +76,51 @@ if [ -n "${LIMPIAR_SOLO:-}" ]; then
 fi
 
 for s in "${SERVICIOS[@]}"; do
-  construir "$s"
+  if quiere "$s"; then construir "$s"; fi
 done
 
-echo "==> Desplegando taxista-service"
-gcloud run deploy taxista-service --image "${REPO}/taxista-service:${TAG}" "${COMUN[@]}" \
-  --set-env-vars "SUPERADMIN_CORREO=${SUPERADMIN_CORREO},APP_MOVIL_CORREO=${APP_MOVIL_CORREO},EXIGIR_CLAVES_FUERTES=true" \
-  --set-secrets "JWT_SECRET=jwt-secret:latest,MONGO_URI_REGISTRY=mongo-uri-registry:latest,SUPERADMIN_PASSWORD=superadmin-password:latest,APP_MOVIL_PASSWORD=app-movil-password:latest"
-TAXISTA_URL="$(url_de taxista-service)"
+if quiere taxista-service; then
+  echo "==> Desplegando taxista-service"
+  gcloud run deploy taxista-service --image "${REPO}/taxista-service:${TAG}" "${COMUN[@]}" \
+    --set-env-vars "SUPERADMIN_CORREO=${SUPERADMIN_CORREO},APP_MOVIL_CORREO=${APP_MOVIL_CORREO},EXIGIR_CLAVES_FUERTES=true" \
+    --set-secrets "JWT_SECRET=jwt-secret:latest,MONGO_URI_REGISTRY=mongo-uri-registry:latest,SUPERADMIN_PASSWORD=superadmin-password:latest,APP_MOVIL_PASSWORD=app-movil-password:latest"
+  TAXISTA_URL="$(url_de taxista-service)"
+else
+  TAXISTA_URL="$(url_de taxista-service)"
+fi
 
-# calificacion-service empuja la valoracion promedio a taxista-service (RN-013), por eso
-# necesita su URL ademas del secreto JWT compartido.
-echo "==> Desplegando calificacion-service"
-gcloud run deploy calificacion-service --image "${REPO}/calificacion-service:${TAG}" "${COMUN[@]}" \
-  --set-env-vars "TAXISTA_SERVICE_URL=${TAXISTA_URL}" \
-  --set-secrets "JWT_SECRET=jwt-secret:latest,MONGO_URI_RATINGS=mongo-uri-ratings:latest"
-CALIF_URL="$(url_de calificacion-service)"
+if quiere calificacion-service; then
+  # calificacion-service empuja la valoracion promedio a taxista-service (RN-013), por eso
+  # necesita su URL ademas del secreto JWT compartido.
+  echo "==> Desplegando calificacion-service"
+  gcloud run deploy calificacion-service --image "${REPO}/calificacion-service:${TAG}" "${COMUN[@]}" \
+    --set-env-vars "TAXISTA_SERVICE_URL=${TAXISTA_URL}" \
+    --set-secrets "JWT_SECRET=jwt-secret:latest,MONGO_URI_RATINGS=mongo-uri-ratings:latest"
+  CALIF_URL="$(url_de calificacion-service)"
+else
+  CALIF_URL="$(url_de calificacion-service)"
+fi
 
-echo "==> Desplegando gateway-service"
-gcloud run deploy gateway-service --image "${REPO}/gateway-service:${TAG}" "${COMUN[@]}" \
-  --set-env-vars "TAXISTA_SERVICE_URL=${TAXISTA_URL},CALIFICACION_SERVICE_URL=${CALIF_URL},GATEWAY_TIMEOUT=20s" \
-  --set-secrets "JWT_SECRET=jwt-secret:latest"
-GATEWAY_URL="$(url_de gateway-service)"
+if quiere gateway-service; then
+  echo "==> Desplegando gateway-service"
+  gcloud run deploy gateway-service --image "${REPO}/gateway-service:${TAG}" "${COMUN[@]}" \
+    --set-env-vars "TAXISTA_SERVICE_URL=${TAXISTA_URL},CALIFICACION_SERVICE_URL=${CALIF_URL},GATEWAY_TIMEOUT=20s" \
+    --set-secrets "JWT_SECRET=jwt-secret:latest"
+  GATEWAY_URL="$(url_de gateway-service)"
+else
+  GATEWAY_URL="$(url_de gateway-service)"
+fi
 
-# El portal sube las fotos a Cloudinary, asi que tambien lleva CLOUDINARY_URL.
-echo "==> Desplegando portal-web"
-gcloud run deploy portal-web --image "${REPO}/portal-web:${TAG}" "${COMUN[@]}" \
-  --set-env-vars "GATEWAY_URL=${GATEWAY_URL},THYMELEAF_CACHE=true,SESSION_COOKIE_SECURE=true" \
-  --set-secrets "CLOUDINARY_URL=cloudinary-url:latest"
-PORTAL_URL="$(url_de portal-web)"
+if quiere portal-web; then
+  # El portal sube las fotos a Cloudinary, asi que tambien lleva CLOUDINARY_URL.
+  echo "==> Desplegando portal-web"
+  gcloud run deploy portal-web --image "${REPO}/portal-web:${TAG}" "${COMUN[@]}" \
+    --set-env-vars "GATEWAY_URL=${GATEWAY_URL},THYMELEAF_CACHE=true,SESSION_COOKIE_SECURE=true" \
+    --set-secrets "CLOUDINARY_URL=cloudinary-url:latest"
+  PORTAL_URL="$(url_de portal-web)"
+else
+  PORTAL_URL="$(url_de portal-web)"
+fi
 
 echo "==> Verificando /actuator/health"
 fallo=0
