@@ -227,6 +227,14 @@ class PermisosPorRolTest {
             assertFalse(comoApp.contains("45678912") || comoApp.contains("Larco"), ruta + " no debe exponer datos personales a la app");
         }
 
+        when(taxistas.cambiarDisponibilidad(any(), any())).thenReturn(t);
+        String alCambiarDisponibilidad = mvc.perform(request(HttpMethod.PATCH, "/api/taxistas/t1/disponibilidad")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"estado\":\"DISPONIBLE\"}")
+                .with(jwt().jwt(j -> j.subject("app")).authorities(new SimpleGrantedAuthority("ROLE_APP_MOVIL"))))
+                .andReturn().getResponse().getContentAsString();
+        assertFalse(alCambiarDisponibilidad.contains("45678912") || alCambiarDisponibilidad.contains("Larco"),
+                "PATCH disponibilidad tampoco debe devolver datos personales a la app");
+
         String comoAdmin = mvc.perform(request(HttpMethod.GET, "/api/taxistas/t1")
                 .with(jwt().jwt(j -> j.subject("a1")).authorities(new SimpleGrantedAuthority("ROLE_SUPERADMIN"))))
                 .andReturn().getResponse().getContentAsString();

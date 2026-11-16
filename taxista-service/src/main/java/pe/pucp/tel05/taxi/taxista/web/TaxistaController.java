@@ -139,12 +139,15 @@ public class TaxistaController {
      */
     @PatchMapping("/{id}/disponibilidad")
     @PreAuthorize("hasAnyRole('SUPERADMIN','APP_MOVIL') or #id == authentication.name")
-    public TaxistaResponse cambiarDisponibilidad(@PathVariable String id,
-                                                 @Valid @RequestBody CambioDisponibilidadRequest req,
-                                                 @AuthenticationPrincipal Jwt jwt) {
+    public Object cambiarDisponibilidad(@PathVariable String id,
+                                        @Valid @RequestBody CambioDisponibilidadRequest req,
+                                        @AuthenticationPrincipal Jwt jwt,
+                                        Authentication auth) {
         Taxista t = servicio.cambiarDisponibilidad(id, req.estado());
         eventos.registrar("DISPONIBILIDAD_CAMBIADA", jwt.getSubject(), id, "Nuevo estado " + req.estado());
-        return TaxistaResponse.desde(t);
+        // Igual que en GET: la app movil recibe la vista reducida.
+        boolean esApp = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_APP_MOVIL"));
+        return esApp ? TaxistaResumenResponse.desde(t) : TaxistaResponse.desde(t);
     }
 
     /**
