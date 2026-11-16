@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
@@ -83,11 +85,20 @@ public class PortalController {
     }
 
     @PostMapping("/logout")
-    public String salir(HttpSession sesion, HttpServletResponse respuesta) {
-        sesion.invalidate();
-        // Pide al navegador borrar su cache de este sitio: las flechas atras/adelante no deben
-        // mostrar paginas privadas de la sesion que se acaba de cerrar
-        respuesta.setHeader("Clear-Site-Data", "\"cache\"");
+    public String salir(HttpServletRequest peticion, HttpServletResponse respuesta) {
+        HttpSession sesion = peticion.getSession(false); // sin crear una nueva solo para cerrarla
+        if (sesion != null) {
+            sesion.invalidate();
+        }
+        // Se borra la cookie de sesion. Si quedara en el navegador, la siguiente pagina privada que se
+        // abra llegaria con un id que el servidor ya no conoce y se mostraria "sesion expirada por
+        // inactividad" aunque el usuario hubiera cerrado sesion a proposito.
+        Cookie cookie = new Cookie("JSESSIONID", "");
+        cookie.setMaxAge(0);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setSecure(peticion.isSecure());
+        respuesta.addCookie(cookie);
         return "redirect:/login";
     }
 
