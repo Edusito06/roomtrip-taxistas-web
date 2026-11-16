@@ -190,3 +190,23 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('table[data-paginate]').forEach(paginar);
   });
 })();
+
+// ---------------------------------------------------------------------
+// Ojito para ver u ocultar la contrasena: <button data-toggle-password="id-del-input">
+// ---------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('[data-toggle-password]').forEach(function (boton) {
+    var input = document.getElementById(boton.getAttribute('data-toggle-password'));
+    var icono = boton.querySelector('i');
+    if (!input) return;
+    boton.addEventListener('click', function () {
+      var mostrar = input.type === 'password';
+      input.type = mostrar ? 'text' : 'password';
+      boton.setAttribute('aria-pressed', String(mostrar));
+      boton.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      boton.title = mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña';
+      if (icono) icono.className = mostrar ? 'bi bi-eye-slash text-muted' : 'bi bi-eye text-muted';
+      input.focus();
+    });
+  });
+});

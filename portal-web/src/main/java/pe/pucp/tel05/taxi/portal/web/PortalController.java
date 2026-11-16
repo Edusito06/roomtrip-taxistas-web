@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import org.springframework.stereotype.Controller;
@@ -82,8 +83,11 @@ public class PortalController {
     }
 
     @PostMapping("/logout")
-    public String salir(HttpSession sesion) {
+    public String salir(HttpSession sesion, HttpServletResponse respuesta) {
         sesion.invalidate();
+        // Pide al navegador borrar su cache de este sitio: las flechas atras/adelante no deben
+        // mostrar paginas privadas de la sesion que se acaba de cerrar
+        respuesta.setHeader("Clear-Site-Data", "\"cache\"");
         return "redirect:/login";
     }
 
